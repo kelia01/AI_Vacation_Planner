@@ -23,7 +23,7 @@ def get_all_trips() -> list:
 def get_trip_by_id(trip_id: int) -> dict | None:
     return trips_db.get(trip_id)
 
-def update_trip_by_id(trip_id: int, updated_data: dict) -> dict | None
+def update_trip_by_id(trip_id: int, updated_data: dict) -> dict | None:
     if trip_id not in trips_db:
         return None
 
@@ -36,3 +36,9 @@ def update_trip_by_id(trip_id: int, updated_data: dict) -> dict | None
 
     trips_db[trip_id] = updated_trip
     return updated_trip
+
+def delete_trip_by_id(trip_id: int) -> bool:
+    if trip_id in trips_db:
+        del trips_db[trip_id]
+        return True
+    return False

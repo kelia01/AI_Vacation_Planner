@@ -15,6 +15,8 @@ class ItineraryUpdate(BaseModel):
 class ItineraryResponse(BaseModel):
     trip_id: int
     itinerary: List[ItineraryDay]
-    
+
+class config:
+        from_attributes = True
 
 
