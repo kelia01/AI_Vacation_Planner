@@ -1,12 +1,12 @@
 from fastapi import FastAPI
-from routes import route
+from routes import trip
 
 app = FastAPI(
     title="AI Vacation planner",
     description="A FAST API for an AI to help plan for vacations"
 )
 
-app.include_router(route.router)
+app.include_router(trip.router)
 
 @app.get("/")
 async def root():

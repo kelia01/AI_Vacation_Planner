@@ -42,7 +42,7 @@ async def update_trip(trip_id: int, trip_update: TripUpdate):
 
     if not updated_data:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"No fields to update"
         )
 

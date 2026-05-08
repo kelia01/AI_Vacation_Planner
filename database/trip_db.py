@@ -32,6 +32,7 @@ def update_trip_by_id(trip_id: int, updated_data: dict) -> dict | None:
         **original_trip,
         **updated_data,
         "id": trip_id,
+        "message": "Trip updated successfully"
     }
 
     trips_db[trip_id] = updated_trip
