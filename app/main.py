@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import trip
+from routers import trip
 
 app = FastAPI(
     title="AI Vacation planner",
