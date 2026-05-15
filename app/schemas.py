@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
+from typing import List
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -45,9 +45,9 @@ class TripResponse(BaseModel):
     days: int
     budget: float
     trip_style: str
-    message: str
+    message: str = "Trip created successfully"
     created_at: datetime
-    update_at: datetime | None = None
+    updated_at: datetime | None = None
     owner_id: int
 
     class Config:
@@ -61,13 +61,23 @@ class ItineraryCreate(BaseModel):
     trip_id: int
     days: List[ItineraryDay]
 
-class ItineraryUpdate(BaseModel):
-    days: ItineraryDay | None = None
+    @field_validator("days")
+    @classmethod
+    def reject_duplicate_days(cls, days):
+        day_numbers = [d.day for d in days]
+        if len(day_numbers) != len(set(day_numbers)):
+            raise ValueError("Duplicate day numbers are not allowed")
+        return days
+
+class ItineraryDayResponse(BaseModel):
+    day: int
+    activities: List[str]
 
 class ItineraryResponse(BaseModel):
+    id: int
     trip_id: int
-    itinerary: List[ItineraryDay]
-    message: str
+    days: List[ItineraryDayResponse]
+    created_at: datetime
 
     class Config:
         from_attributes = True
