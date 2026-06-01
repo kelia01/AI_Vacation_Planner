@@ -23,7 +23,7 @@ def create_itinerary(
             raise HTTPException(status_code=404, detail="Trip not found or itinerary already exists")
 
     days = [
-        schemas.ItineraryDayResponse(
+        schemas.ItineraryDay(
             day=day.day_number,
             activities=json.loads(day.activities)
         )
@@ -49,7 +49,7 @@ def get_itinerary(
         raise HTTPException(status_code=404, detail="Itinerary not found")
 
     days = [
-        schemas.ItineraryDayResponse(
+        schemas.ItineraryDay(
             day=day.day_number,
             activities=json.loads(day.activities)
         )

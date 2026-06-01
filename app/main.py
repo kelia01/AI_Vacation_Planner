@@ -1,9 +1,8 @@
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.security import OAuth2PasswordBearer
 from app.database import engine, Base
-from app.routers import auth, trips, itineraries
+from app.routers import auth, users, trips, itineraries
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(trips.router)
 app.include_router(itineraries.router)
 

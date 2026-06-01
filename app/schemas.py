@@ -69,14 +69,10 @@ class ItineraryCreate(BaseModel):
             raise ValueError("Duplicate day numbers are not allowed")
         return days
 
-class ItineraryDayResponse(BaseModel):
-    day: int
-    activities: List[str]
-
 class ItineraryResponse(BaseModel):
     id: int
     trip_id: int
-    days: List[ItineraryDayResponse]
+    days: List[ItineraryDay]
     created_at: datetime
 
     class Config:
