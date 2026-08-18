@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
+from typing import List
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -45,29 +45,63 @@ class TripResponse(BaseModel):
     days: int
     budget: float
     trip_style: str
-    message: str
+    message: str = "Trip created successfully"
     created_at: datetime
-    update_at: datetime | None = None
+    updated_at: datetime | None = None
     owner_id: int
 
     class Config:
         from_attributes = True
 
 class ItineraryDay(BaseModel):
-    day: int
+    day: int = Field(..., ge=1)
     activities: List[str]
+
+    @field_validator("activities")
+    @classmethod
+    def validate_activities(cls, activities):
+
+        if len(activities) == 0:
+            raise ValueError(
+                "Each day must contain at least one activity."
+            )
+
+        return activities
 
 class ItineraryCreate(BaseModel):
     trip_id: int
     days: List[ItineraryDay]
 
-class ItineraryUpdate(BaseModel):
-    days: ItineraryDay | None = None
+    @field_validator("days")
+    @classmethod
+    def reject_duplicate_days(cls, days):
 
+        numbers = [d.day for d in days]
+
+        if len(numbers) != len(set(numbers)):
+            raise ValueError(
+                "Duplicate day numbers are not allowed."
+            )
+
+        return days
+
+    @model_validator(mode="after")
+    def validate_day_sequence(self):
+
+        expected = list(range(1, len(self.days) + 1))
+        actual = sorted(day.day for day in self.days)
+
+        if expected != actual:
+            raise ValueError(
+                "Day numbers must be consecutive."
+            )
+
+        return self
 class ItineraryResponse(BaseModel):
+    id: int
     trip_id: int
-    itinerary: List[ItineraryDay]
-    message: str
+    days: List[ItineraryDay]
+    created_at: datetime
 
     class Config:
         from_attributes = True

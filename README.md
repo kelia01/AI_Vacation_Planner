@@ -10,43 +10,43 @@ The AI Vacation Planner is a FastAPI-based backend that allows users to create t
 
 ### Backend API
 
-* FastAPI REST API
-* SQLite database
-* SQLAlchemy/ORM-based database operations
-* Pydantic request and response schemas
-* CRUD operations for trips and itineraries
-* JWT-based authentication
-* Environment-based configuration
-* Swagger/OpenAPI documentation
+- FastAPI REST API
+- SQLite database
+- SQLAlchemy/ORM-based database operations
+- Pydantic request and response schemas
+- CRUD operations for trips and itineraries
+- JWT-based authentication
+- Environment-based configuration
+- Swagger/OpenAPI documentation
 
 ### Trip Management
 
 Users can:
 
-* Register
-* Log in
-* View their profile
-* Create trips
-* View all their trips
-* View individual trips
-* Update trip details
-* Delete trips
+- Register
+- Log in
+- View their profile
+- Create trips
+- View all their trips
+- View individual trips
+- Update trip details
+- Delete trips
 
 A trip contains information such as:
 
-* Destination
-* Number of days
-* Budget
-* Travel style
+- Destination
+- Number of days
+- Budget
+- Travel style
 
 ### Itinerary Management
 
 Users can:
 
-* Create an itinerary manually
-* Retrieve an itinerary for a trip
-* Generate an itinerary using AI
-* Store generated itineraries in the database
+- Create an itinerary manually
+- Retrieve an itinerary for a trip
+- Generate an itinerary using AI
+- Store generated itineraries in the database
 
 ## AI Itinerary Generation
 
@@ -54,10 +54,10 @@ The backend integrates with the Anthropic API to generate itineraries from trip 
 
 The AI receives information such as:
 
-* Destination
-* Number of days
-* Budget
-* Travel style
+- Destination
+- Number of days
+- Budget
+- Travel style
 
 The generated itinerary is expected to follow a predictable structure:
 
@@ -66,11 +66,7 @@ The generated itinerary is expected to follow a predictable structure:
   "days": [
     {
       "day": 1,
-      "activities": [
-        "Breakfast",
-        "Museum visit",
-        "Dinner"
-      ]
+      "activities": ["Breakfast", "Museum visit", "Dinner"]
     }
   ]
 }
@@ -257,17 +253,11 @@ The exact request and response schemas are documented automatically through Swag
   "itinerary": [
     {
       "day": 1,
-      "activities": [
-        "Eiffel Tower",
-        "Seine River Walk"
-      ]
+      "activities": ["Eiffel Tower", "Seine River Walk"]
     },
     {
       "day": 2,
-      "activities": [
-        "Louvre Museum",
-        "Montmartre"
-      ]
+      "activities": ["Louvre Museum", "Montmartre"]
     }
   ],
   "message": "Itinerary created successfully"
@@ -374,71 +364,71 @@ http://127.0.0.1:8000/docs
 
 Implemented:
 
-* FastAPI backend
-* REST API
-* SQLite database
-* ORM/database operations
-* User, Trip, and Itinerary entities
-* CRUD operations
-* Authentication
-* Pydantic schemas
-* Environment configuration
-* Swagger/OpenAPI documentation
+- FastAPI backend
+- REST API
+- SQLite database
+- ORM/database operations
+- User, Trip, and Itinerary entities
+- CRUD operations
+- Authentication
+- Pydantic schemas
+- Environment configuration
+- Swagger/OpenAPI documentation
 
 ### Phase 2 — LLM Foundations & Prompting
 
 Implemented:
 
-* Anthropic Claude integration
-* System and user prompts
-* Prompt construction using database trip information
-* AI-generated itineraries
-* Saving generated itineraries to the database
-* JSON response generation
+- Anthropic Claude integration
+- System and user prompts
+- Prompt construction using database trip information
+- AI-generated itineraries
+- Saving generated itineraries to the database
+- JSON response generation
 
 ### Phase 3 — Designing AI Systems
 
 Implemented:
 
-* Structured itinerary output
-* JSON parsing
-* Pydantic validation
-* Retry handling for invalid JSON
-* External weather tool
-* Tool-call handling
-* State maintained during the tool-call interaction
-* AI-generated itinerary persistence
-* Swagger documentation updates
+- Structured itinerary output
+- JSON parsing
+- Pydantic validation
+- Retry handling for invalid JSON
+- External weather tool
+- Tool-call handling
+- State maintained during the tool-call interaction
+- AI-generated itinerary persistence
+- Swagger documentation updates
 
 ## Technology Stack
 
 ### Backend
 
-* Python
-* FastAPI
-* Pydantic
-* SQLAlchemy
-* SQLite
+- Python
+- FastAPI
+- Pydantic
+- SQLAlchemy
+- SQLite
 
 ### AI
 
-* Anthropic API
-* Claude Haiku
-* Prompt engineering
-* Structured JSON generation
-* Tool calling
+- Anthropic API
+- Claude Haiku
+- Prompt engineering
+- Structured JSON generation
+- Tool calling
 
 ### Authentication
 
-* JWT
-* Password hashing
+- JWT
+- Password hashing
 
 ### Development
 
-* Git
-* GitHub
-* Swagger/OpenAPI
-* Python virtual environments
+- Git
+- GitHub
+- Swagger/OpenAPI
+- Python virtual environments
 
 ## Architecture
 

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Float, String,ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.database.db import Base
+from app.database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -29,7 +29,7 @@ class Trip(Base):
 
     owner = relationship("User", back_populates="trips")
     itinerary = relationship("Itinerary", back_populates="trip", uselist=False,
-    cascade="all delete-orphan")
+    cascade="all, delete-orphan")
 
 class Itinerary(Base):
     __tablename__ = "itineraries"
@@ -39,7 +39,7 @@ class Itinerary(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     trip = relationship("Trip", back_populates="itinerary")
-    days = relationship("ItineraryDay", back_populates="itinerary", cascade="all delete-orphan")
+    days = relationship("ItineraryDay", back_populates="itinerary", cascade="all, delete-orphan")
 
 class ItineraryDay(Base):
     __tablename__ = "itinerary_days"
