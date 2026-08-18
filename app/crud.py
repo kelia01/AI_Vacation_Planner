@@ -108,3 +108,54 @@ def get_itinerary_by_trip_id(db: Session, trip_id: int, owner_id: int):
             .filter(models.Itinerary.trip_id == trip_id)
             .first())
 
+def update_itinerary(
+        db: Session,
+        itinerary: schemas.ItineraryCreate,
+        owner_id: int
+):
+
+    existing = get_itinerary_by_trip_id(
+        db,
+        itinerary.trip_id,
+        owner_id
+    )
+
+    if existing:
+
+        db.query(models.ItineraryDay).filter(
+
+            models.ItineraryDay.itinerary_id == existing.id
+
+        ).delete()
+
+        for day in itinerary.days:
+
+            db.add(
+
+                models.ItineraryDay(
+
+                    itinerary_id=existing.id,
+
+                    day_number=day.day,
+
+                    activities=json.dumps(day.activities)
+
+                )
+
+            )
+
+        db.commit()
+
+        db.refresh(existing)
+
+        return existing
+
+    return create_itinerary(
+
+        db,
+
+        itinerary,
+
+        owner_id
+
+    )

@@ -75,5 +75,3 @@ def get_itinerary(
         days=days,
         created_at=db_itinerary.created_at
     )
-
-

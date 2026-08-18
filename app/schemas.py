@@ -54,8 +54,19 @@ class TripResponse(BaseModel):
         from_attributes = True
 
 class ItineraryDay(BaseModel):
-    day: int
+    day: int = Field(..., ge=1)
     activities: List[str]
+
+    @field_validator("activities")
+    @classmethod
+    def validate_activities(cls, activities):
+
+        if len(activities) == 0:
+            raise ValueError(
+                "Each day must contain at least one activity."
+            )
+
+        return activities
 
 class ItineraryCreate(BaseModel):
     trip_id: int
@@ -64,11 +75,28 @@ class ItineraryCreate(BaseModel):
     @field_validator("days")
     @classmethod
     def reject_duplicate_days(cls, days):
-        day_numbers = [d.day for d in days]
-        if len(day_numbers) != len(set(day_numbers)):
-            raise ValueError("Duplicate day numbers are not allowed")
+
+        numbers = [d.day for d in days]
+
+        if len(numbers) != len(set(numbers)):
+            raise ValueError(
+                "Duplicate day numbers are not allowed."
+            )
+
         return days
 
+    @model_validator(mode="after")
+    def validate_day_sequence(self):
+
+        expected = list(range(1, len(self.days) + 1))
+        actual = sorted(day.day for day in self.days)
+
+        if expected != actual:
+            raise ValueError(
+                "Day numbers must be consecutive."
+            )
+
+        return self
 class ItineraryResponse(BaseModel):
     id: int
     trip_id: int
