@@ -26,6 +26,7 @@ Relevant Context
 Claude
     ↓
 AI Response
+```
 
 ### Knowledge Base
 
