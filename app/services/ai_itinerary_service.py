@@ -6,6 +6,7 @@ from anthropic import Anthropic
 from fastapi import HTTPException
 from app import crud, schemas
 from app.services.weather_service import get_weather
+from app.services.rag_service import rag_service
 
 api_key = os.getenv("ANTHROPIC_API_KEY")
 MODEL = "claude-haiku-4-5"
@@ -54,6 +55,13 @@ def _validate_itinerary(ai_data):
         )
         
 def generate_itinerary_from_trip(trip):
+    
+    rag_service.initialize()
+    context = rag_service.get_context(
+        query=f"Travel tips and attractions for {trip.destination}",
+        destination=trip.destination,
+        top_k=3
+    )
 
     prompt = f"""
 You are planning a vacation.
@@ -69,6 +77,9 @@ Budget:
 
 Travel style:
 {trip.trip_style}
+
+Use this information to make your recommendations:
+{context if context else "No specific travel knowledge available. Use your general knowledge."}
 
 Instructions:
 
