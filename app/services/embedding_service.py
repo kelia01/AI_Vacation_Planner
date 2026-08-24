@@ -42,11 +42,9 @@ class EmbeddingService:
         """
         model = self._load_model()
         
-        # Handle single text
         if isinstance(texts, str):
             texts = [texts]
         
-        # Check cache
         embeddings = []
         uncached_texts = []
         uncached_indices = []
@@ -63,7 +61,6 @@ class EmbeddingService:
                 uncached_indices.append(i)
                 embeddings.append(None)
         
-        # Generate embeddings for uncached texts
         if uncached_texts:
             new_embeddings = model.encode(
                 uncached_texts,
@@ -71,7 +68,6 @@ class EmbeddingService:
                 normalize_embeddings=True
             )
             
-            # Save to cache and fill results
             for idx, text in zip(uncached_indices, uncached_texts):
                 embedding = new_embeddings[idx].tolist()
                 cache_key = self._get_cache_key(text)

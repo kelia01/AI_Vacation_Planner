@@ -28,10 +28,6 @@ def answer_travel_question(
     6. Return the answer together with the retrieved sources.
     """
 
-    print("\n========== RAG DEBUG ==========")
-    print("Question:", question)
-    print("Destination:", destination)
-
     # ---------------------------------------------------------
     # 1. RETRIEVE KNOWLEDGE
     # ---------------------------------------------------------
@@ -73,9 +69,7 @@ def answer_travel_question(
         print("\n========== RAG ERROR ==========")
         print(type(e).__name__, ":", str(e))
         print("===============================\n")
-
-        # Do NOT silently pretend RAG worked.
-        # For development, expose the error.
+        
         raise
 
     # ---------------------------------------------------------

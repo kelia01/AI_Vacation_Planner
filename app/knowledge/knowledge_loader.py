@@ -21,7 +21,7 @@ class KnowledgeLoader:
                 self.documents = data.get("documents", [])
                 return self.documents
         except FileNotFoundError:
-            # Create default FAQs if file doesn't exist
+            
             self._create_default_faqs()
             return self.documents
     
@@ -46,7 +46,6 @@ class KnowledgeLoader:
             ]
         }
         
-        # Ensure directory exists
         os.makedirs(os.path.dirname(self.faqs_path), exist_ok=True)
         
         with open(self.faqs_path, 'w', encoding='utf-8') as f:
@@ -61,7 +60,6 @@ class KnowledgeLoader:
         
         chunks = []
         for doc in documents:
-            # For each document, we'll create multiple chunks if content is long
             content_parts = self._split_content(doc["content"])
             
             for i, part in enumerate(content_parts):
@@ -83,7 +81,7 @@ class KnowledgeLoader:
     
     def _split_content(self, content: str) -> List[str]:
         """Split content into smaller chunks based on sentences."""
-        # Split by sentences
+        
         sentences = re.split(r'(?<=[.!?])\s+', content)
         
         chunks = []

@@ -65,9 +65,6 @@ class RAGService:
         # --------------------------------------------------
 
         # We upsert every time.
-        #
-        # This makes changing faqs.json safe because
-        # ChromaDB will update existing IDs.
         chunk_texts = [
             chunk["content"]
             for chunk in self.chunks

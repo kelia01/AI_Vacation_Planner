@@ -10,7 +10,7 @@ class ChromaService:
     """
 
     def __init__(self):
-        # Store ChromaDB locally inside the project
+        
         self.persist_directory = (
             Path(__file__).resolve().parent.parent / "chroma_db"
         )
@@ -123,8 +123,6 @@ class ChromaService:
 
         for i, document in enumerate(documents):
 
-            # Chroma returns distance.
-            # Lower distance = more similar.
             distance = (
                 distances[i]
                 if i < len(distances)
