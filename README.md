@@ -26,6 +26,7 @@ Relevant Context
 Claude
     ↓
 AI Response
+```
 
 ### Knowledge Base
 
@@ -98,7 +99,7 @@ Generate Answer
 The /ask endpoint returns the generated answer together with the retrieved sources.
 
 Example:
-
+```
 {
   "answer": "...",
   "sources": [
@@ -109,10 +110,9 @@ Example:
   ],
   "rag_used": true
 }
-
-rag_used indicates whether relevant knowledge-base information was retrieved.
-
-Project Structure
+```
+### Project Structure
+```
 app/
 ├── knowledge/
 │   ├── faqs.json
@@ -122,7 +122,8 @@ app/
     ├── embedding_service.py
     ├── rag_service.py
     └── rag_answer_service.py
-API Documentation
+```
+### API Documentation
 
 The API is documented using FastAPI Swagger.
 
