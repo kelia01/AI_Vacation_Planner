@@ -6,9 +6,34 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
 from app.services.ai_itinerary_service import generate_ai_itinerary
+from app.services.rag_answer_service import answer_travel_question
 
 router = APIRouter(prefix="/itineraries", tags=["itineraries"])
 
+@router.post("/ask")
+def ask_travel_question(
+    question_data: schemas.AskQuestionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Ask a travel question with RAG-augmented response.
+    """
+    destination = None
+    
+    if question_data.trip_id:
+        trip = crud.get_trip_by_id(db, question_data.trip_id, current_user.id)
+        if trip:
+            destination = trip.destination
+    
+    try:
+        result = answer_travel_question(question_data.question, destination)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error answering question: {str(e)}"
+        )
 @router.post("/generate/{trip_id}", response_model=schemas.ItineraryResponse)
 def generate_itinerary(
         trip_id: int,

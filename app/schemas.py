@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -105,4 +105,8 @@ class ItineraryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+class AskQuestionRequest(BaseModel):
+    question: str
+    trip_id: Optional[int] = None
 

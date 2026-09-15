@@ -1,0 +1,74 @@
+{
+  "documents": [
+    {
+      "id": "faq_paris_1",
+      "title": "Paris Travel Tips",
+      "destination": "Paris",
+      "content": "The best time to visit Paris is during spring (April to June) or fall (September to November) when the weather is mild and tourist crowds are smaller. Avoid August when many locals are on vacation and some restaurants close.",
+      "category": "general_tips"
+    },
+    {
+      "id": "faq_paris_2",
+      "title": "Budget Tips for Paris",
+      "destination": "Paris",
+      "content": "For budget travelers in Paris, consider buying a Paris Museum Pass for access to over 60 museums. Use the Metro system for affordable transportation. Many bakeries offer affordable and delicious meals. Visit free attractions like the Sacré-Cœur Basilica and Luxembourg Gardens.",
+      "category": "budget_tips"
+    },
+    {
+      "id": "faq_paris_3",
+      "title": "Must-See Attractions in Paris",
+      "destination": "Paris",
+      "content": "Must-see attractions in Paris include the Eiffel Tower (visit at sunset for amazing views), Louvre Museum (home to the Mona Lisa), Notre-Dame Cathedral, Montmartre and the Sacré-Cœur Basilica, and the Champs-Élysées leading to the Arc de Triomphe.",
+      "category": "attractions"
+    },
+    {
+      "id": "faq_tokyo_1",
+      "title": "Tokyo Travel Tips",
+      "destination": "Tokyo",
+      "content": "Tokyo is best visited during spring (March to May) for cherry blossoms or autumn (October to November) for fall colors. The city has excellent public transportation with the JR Rail Pass being cost-effective for tourists. Be prepared for cash-only small shops and restaurants.",
+      "category": "general_tips"
+    },
+    {
+      "id": "faq_tokyo_2",
+      "title": "Hidden Gems in Tokyo",
+      "destination": "Tokyo",
+      "content": "Beyond the tourist spots, explore Shimokitazawa for vintage shopping and cafes, Kichijoji for its park and artisan shops, and Golden Gai in Shinjuku for tiny unique bars. Also visit the teamLab Borderless digital art museum for an unforgettable experience.",
+      "category": "hidden_gems"
+    },
+    {
+      "id": "faq_bali_1",
+      "title": "Bali Travel Tips",
+      "destination": "Bali",
+      "content": "The best time to visit Bali is during the dry season (April to October) when the weather is sunny. Be respectful of local customs by wearing sarongs when entering temples. Use ride-hailing apps like Gojek or Grab for affordable transportation.",
+      "category": "general_tips"
+    },
+    {
+      "id": "faq_bali_2",
+      "title": "Hidden Gems in Bali",
+      "destination": "Bali",
+      "content": "Explore less-touristy spots in Bali like Sidemen Valley for stunning rice terraces, Amed for snorkeling without crowds, and Nusa Penida's Kelingking Beach. Also visit the Tirta Gangga Water Palace for serene water gardens away from the main tourist areas.",
+      "category": "hidden_gems"
+    },
+    {
+      "id": "faq_rome_1",
+      "title": "Rome Travel Tips",
+      "destination": "Rome",
+      "content": "Visit Rome in the shoulder seasons (April-May or September-October) to avoid the intense summer heat and crowds. Book major attractions like the Colosseum and Vatican Museums in advance online. Explore the Trastevere neighborhood in the evening for authentic Roman cuisine.",
+      "category": "general_tips"
+    },
+    {
+      "id": "faq_rome_2",
+      "title": "Rome on a Budget",
+      "destination": "Rome",
+      "content": "Budget travelers in Rome can save by using the Roma Pass for public transport and museums. Many churches offer free entry and are stunning. Eat near university areas for affordable meals. Visit the Appian Way for free ancient history walking tours.",
+      "category": "budget_tips"
+    },
+    {
+      "id": "faq_barcelona_1",
+      "title": "Barcelona Travel Tips",
+      "destination": "Barcelona",
+      "content": "Barcelona is beautiful in spring and fall. Book tickets online for Sagrada Familia and Park Güell to avoid long waits. Use the efficient Metro system. The Gothic Quarter and El Born offer great tapas bars in the evening.",
+      "category": "general_tips"
+    }
+  ]
+}
