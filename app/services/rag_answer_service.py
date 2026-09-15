@@ -33,14 +33,7 @@ def answer_travel_question(
     # ---------------------------------------------------------
 
     try:
-        rag_service.initialize()
-
-        print("Chunks loaded:", len(rag_service.chunks))
-        print(
-            "Embeddings loaded:",
-            len(rag_service.chunk_embeddings)
-        )
-
+        
         sources = rag_service.search(
             query=question,
             destination=destination,

@@ -56,7 +56,6 @@ def _validate_itinerary(ai_data):
         
 def generate_itinerary_from_trip(trip):
     
-    rag_service.initialize()
     context = rag_service.get_context(
         query=f"Travel tips and attractions for {trip.destination}",
         destination=trip.destination,

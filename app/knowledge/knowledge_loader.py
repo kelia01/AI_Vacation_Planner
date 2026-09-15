@@ -2,13 +2,14 @@ import json
 import os
 from typing import List, Dict, Any
 import re
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class KnowledgeLoader:
     """Loads and chunks travel knowledge documents."""
     
     def __init__(self, faqs_path: str = None):
         self.faqs_path = faqs_path or os.path.join(
-            os.path.dirname(__file__), "faqs.json"
+            os.path.dirname(__file__),"data", "faqs.json"
         )
         self.documents = []
         self.chunks = []
@@ -80,26 +81,14 @@ class KnowledgeLoader:
         return chunks
     
     def _split_content(self, content: str) -> List[str]:
-        """Split content into smaller chunks based on sentences."""
+        """Split content into overlapping chunks"""
         
-        sentences = re.split(r'(?<=[.!?])\s+', content)
-        
-        chunks = []
-        current_chunk = ""
-        max_chunk_size = 500  # Characters, adjust as needed
-        
-        for sentence in sentences:
-            if len(current_chunk) + len(sentence) < max_chunk_size:
-                current_chunk += sentence + " "
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                current_chunk = sentence + " "
-        
-        if current_chunk.strip():
-            chunks.append(current_chunk.strip())
-        
-        return chunks
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
+        return splitter.split_text(content)
     
     def get_filtered_by_destination(self, destination: str) -> List[Dict[str, Any]]:
         """Get chunks specific to a destination."""

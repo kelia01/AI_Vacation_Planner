@@ -32,7 +32,7 @@ AI Response
 
 Travel information is stored in:
 
-app/knowledge/faqs.json
+app/data/faqs.json
 
 The knowledge base contains destination-specific information such as:
 
@@ -115,8 +115,10 @@ Example:
 ```
 app/
 ├── knowledge/
-│   ├── faqs.json
 │   └── knowledge_loader.py
+|
+├── data/
+│   ├── faqs.json
 │
 └── services/
     ├── embedding_service.py

@@ -2,95 +2,18 @@ from typing import List, Dict, Any, Optional
 
 from .embedding_service import embedding_service
 from .chroma_service import chroma_service
-from ..knowledge.knowledge_loader import knowledge_loader
 
 
 class RAGService:
     """
     Retrieval-Augmented Generation service.
 
-    Responsible for:
+    Responsible for querying the existing travel
+    knowledge stored in ChromaDB.
 
-    1. Loading the travel knowledge base.
-    2. Chunking documents.
-    3. Creating embeddings.
-    4. Storing embeddings in ChromaDB.
-    5. Performing semantic search.
-    6. Returning relevant context for the LLM.
+    Knowledge ingestion and embedding generation are
+    handled separately by the ingestion process.
     """
-
-    def __init__(self):
-        self.chunks: List[Dict[str, Any]] = []
-        self._is_initialized = False
-
-    def initialize(self):
-        """
-        Load the knowledge base and make sure its embeddings
-        exist inside ChromaDB.
-        """
-
-        if self._is_initialized:
-            return
-
-        print("Initializing RAG Service...")
-
-        # --------------------------------------------------
-        # 1. Load and chunk knowledge
-        # --------------------------------------------------
-
-        self.chunks = knowledge_loader.load_and_chunk()
-
-        if not self.chunks:
-            print("No knowledge chunks found.")
-            self._is_initialized = True
-            return
-
-        print(
-            f"Loaded {len(self.chunks)} knowledge chunks."
-        )
-
-        # --------------------------------------------------
-        # 2. Check whether Chroma already contains them
-        # --------------------------------------------------
-
-        existing_count = chroma_service.count()
-
-        print(
-            f"ChromaDB currently contains "
-            f"{existing_count} documents."
-        )
-
-        # --------------------------------------------------
-        # 3. Create embeddings and store them
-        # --------------------------------------------------
-
-        # We upsert every time.
-        chunk_texts = [
-            chunk["content"]
-            for chunk in self.chunks
-        ]
-
-        print("Generating embeddings...")
-
-        embeddings = embedding_service.encode(
-            chunk_texts
-        )
-
-        print("Storing embeddings in ChromaDB...")
-
-        chroma_service.add_documents(
-            chunks=self.chunks,
-            embeddings=embeddings
-        )
-
-        print(
-            f"ChromaDB now contains "
-            f"{chroma_service.count()} documents."
-        )
-
-        self._is_initialized = True
-
-        print("RAG Service initialized successfully.")
 
     def search(
         self,
@@ -102,31 +25,18 @@ class RAGService:
         Perform semantic search against ChromaDB.
         """
 
-        if not self._is_initialized:
-            self.initialize()
-
-        if not self.chunks:
+        if chroma_service.count() == 0:
             return []
 
-        # --------------------------------------------------
-        # Create embedding for the user's question
-        # --------------------------------------------------
-
-        query_embedding = embedding_service.encode_single(
-            query
+        query_embedding = (
+            embedding_service.encode_single(query)
         )
 
-        # --------------------------------------------------
-        # Search ChromaDB
-        # --------------------------------------------------
-
-        results = chroma_service.search(
+        return chroma_service.search(
             query_embedding=query_embedding,
             top_k=top_k,
             destination=destination
         )
-
-        return results
 
     def get_context(
         self,
@@ -192,7 +102,6 @@ class RAGService:
         )
 
         if context:
-
             augmented_prompt = f"""
 Context from the travel knowledge base:
 
@@ -204,9 +113,7 @@ User question:
 
 {user_query}
 """
-
         else:
-
             augmented_prompt = user_query
 
         return {

@@ -22,3 +22,5 @@ env/
 
 # Logs
 *.log
+
+app/chroma_db/

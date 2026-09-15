@@ -1,0 +1,22 @@
+[project]
+name = "ai-vacation-planner"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Kelia01", email = "iradukundakelia@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "chromadb>=1.5.9",
+    "langchain-text-splitters>=1.1.2",
+    "numpy>=2.5.3",
+    "sentence-transformers>=6.0.1",
+]
+
+[project.scripts]
+ai-vacation-planner = "ai_vacation_planner:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"

@@ -4,6 +4,7 @@ import numpy as np
 import hashlib
 import json
 from pathlib import Path
+from sentence_transformers import SentenceTransformer
 
 class EmbeddingService:
     """
@@ -20,15 +21,9 @@ class EmbeddingService:
     def _load_model(self):
         """Lazy load the embedding model."""
         if self.model is None:
-            try:
-                from sentence_transformers import SentenceTransformer
-                print(f"Loading embedding model: {self.model_name}")
-                self.model = SentenceTransformer(self.model_name)
-            except ImportError:
-                raise ImportError(
-                    "sentence-transformers is required. Install with: "
-                    "pip install sentence-transformers"
-                )
+            print(f"Loading embedding model: {self.model_name}")
+            self.model = SentenceTransformer(self.model_name)
+            
         return self.model
     
     def _get_cache_key(self, text: str) -> str:
@@ -68,13 +63,23 @@ class EmbeddingService:
                 normalize_embeddings=True
             )
             
-            for idx, text in zip(uncached_indices, uncached_texts):
-                embedding = new_embeddings[idx].tolist()
+            for embedding_index, (original_index, text) in enumerate(
+                zip(uncached_indices, uncached_texts)
+            ):
+                embedding = new_embeddings[embedding_index].tolist()
+
                 cache_key = self._get_cache_key(text)
-                cache_file = self.cache_dir / f"{cache_key}.npy"
-                
-                np.save(cache_file, np.array(embedding))
-                embeddings[idx] = embedding
+
+                cache_file = (
+                    self.cache_dir
+                    / f"{cache_key}.npy"
+                )
+
+                np.save(
+                    cache_file,
+                    np.array(embedding)
+                )
+                embeddings[original_index] = embedding
         
         return embeddings
     
