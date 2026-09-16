@@ -6,6 +6,7 @@ Tools allow the agent to gather information and make decisions.
 
 import json
 from typing import Any, Dict
+from langchain.tools import tool
 from app.services.weather_service import get_weather
 from app.services.rag_service import rag_service
 

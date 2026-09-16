@@ -6,8 +6,10 @@ Orchestrates tool usage, itinerary generation, and approval workflow.
 
 import os
 import json
+import sqlite3
 from typing import Any
 from dotenv import load_dotenv
+from pathlib import Path
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -29,7 +31,7 @@ load_dotenv()
 
 MAX_TOOL_ITERATIONS = 5
 MODEL = "claude-haiku-4-5"
-CHECKPOINT_DIR = "./checkpoints"
+CHECKPOINT_DIR = str(Path(__file__).parent.parent.parent / "checkpoints")
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -333,9 +335,15 @@ def build_agent_graph():
     )
     
     graph.add_edge("validate", END)
+
+    conn = sqlite3.connect(
+        CHECKPOINT_DIR,
+        check_same_thread=False
+    )
     
     # Compile with checkpointer for state persistence
-    checkpointer = SqliteSaver(CHECKPOINT_DIR)
+    checkpointer = SqliteSaver(conn)
+    checkpointer.setup()
     compiled_graph = graph.compile(checkpointer=checkpointer)
     
     return compiled_graph
