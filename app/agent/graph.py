@@ -1,53 +1,69 @@
 """
 LangGraph workflow for the vacation planning agent.
 
-Orchestrates tool usage, itinerary generation, and approval workflow.
+Uses LangChain model abstraction (init_chat_model) for provider-agnostic LLM usage.
+Properly implements tool calling and ToolNode pattern.
 """
 
 import os
 import json
-import sqlite3
-from typing import Any
-from dotenv import load_dotenv
+from typing import Literal
 from pathlib import Path
 
+from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
+from langchain.chat_models import init_chat_model
+from langchain.tools import tool
 from langgraph.graph import StateGraph, END
+from langgraph.types import Command
+from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.sqlite import SqliteSaver
-
-from anthropic import Anthropic
+from pydantic import BaseModel
 
 from app.agent.state import AgentState
-from app.agent.tools import TOOLS, execute_tool
 from app.agent.models import StructuredItinerary
+from app.agent.tools import AGENT_TOOLS
 from app import crud
-from app.services.rag_service import rag_service
+import sqlite3
 
-
-load_dotenv()
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-MAX_TOOL_ITERATIONS = 5
-MODEL = "claude-haiku-4-5"
-CHECKPOINT_DIR = str(Path(__file__).parent.parent.parent / "checkpoints")
+MAX_ITERATIONS = 5
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+# Initialize LLM via LangChain abstraction (provider agnostic)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google_genai")
 
-# Create checkpoint directory if needed
-os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+if LLM_PROVIDER == "google_genai":
+    llm = init_chat_model(
+        "gemini-3.6-flash",
+        model_provider="google_genai"
+    )
+elif LLM_PROVIDER == "anthropic":
+    llm = init_chat_model(
+        "claude-haiku-4-5",
+        model_provider="anthropic"
+    )
+else:
+    raise ValueError(f"Unknown LLM provider: {LLM_PROVIDER}")
+
+# Checkpointing (fixed SQLite path)
+CHECKPOINT_DIR = Path(__file__).parent.parent.parent / "checkpoints"
+CHECKPOINT_DIR.mkdir(exist_ok=True)
+CHECKPOINT_FILE = CHECKPOINT_DIR / "agent.db"
+
+conn = sqlite3.connect(str(CHECKPOINT_FILE), check_same_thread=False)
+checkpointer = SqliteSaver(conn)
 
 
 # ============================================================================
-# NODE: TRIP RETRIEVAL
+# NODES
 # ============================================================================
 
 def retrieve_trip_node(state: AgentState, db) -> AgentState:
     """
-    Retrieve trip details from database.
-    
-    Verifies authorization and loads trip context.
+    Retrieve trip details from database with authorization.
     """
     if not state.trip_id or not state.user_id:
         state.error = "Missing trip_id or user_id"
@@ -59,7 +75,6 @@ def retrieve_trip_node(state: AgentState, db) -> AgentState:
             state.error = "Trip not found or unauthorized"
             return state
         
-        # Cache trip details in state
         state.trip = {
             "id": trip.id,
             "destination": trip.destination,
@@ -75,35 +90,28 @@ def retrieve_trip_node(state: AgentState, db) -> AgentState:
     return state
 
 
-# ============================================================================
-# NODE: AGENT DECISION & TOOL CALLING
-# ============================================================================
-
-def agent_node(state: AgentState) -> AgentState:
+def agent_node(state: AgentState) -> Command:
     """
-    Main agent node using Claude to decide which tools are needed
-    and generate the itinerary.
+    Main agent node using LangChain model with bound tools.
     
-    This node handles tool calling in a loop until the agent
-    produces final structured output or hits the iteration limit.
+    Returns a Command to route to ToolNode or proceed to validation.
     """
     
     if state.error:
-        return state
+        return Command(goto="end", update={"approval_state": "error"})
     
     if not state.trip:
         state.error = "Trip not loaded"
-        return state
-    
-    # Initialize messages if empty
-    if not state.messages:
-        state.messages = []
+        return Command(goto="end", update={"approval_state": "error"})
     
     # Build system prompt
     system_prompt = f"""You are an expert travel planner AI assistant.
 
 You have access to tools to help plan itineraries:
-{json.dumps([{"name": name, "description": tool["description"]} for name, tool in TOOLS.items()], indent=2)}
+- get_weather_tool: Get weather forecast
+- search_travel_knowledge_tool: Query travel knowledge base
+- search_places_tool: Find attractions
+- estimate_costs_tool: Estimate trip costs
 
 TRIP DETAILS:
 - Destination: {state.trip['destination']}
@@ -112,7 +120,7 @@ TRIP DETAILS:
 - Travel Style: {state.trip['trip_style']}
 
 Your task:
-1. Gather necessary information using tools (weather, travel knowledge, places, costs)
+1. Use tools to gather information (weather, attractions, costs, travel tips)
 2. Generate a detailed, structured itinerary
 3. Return ONLY valid JSON matching this schema:
 
@@ -145,139 +153,98 @@ Your task:
 }}
 
 Rules:
-- Use weather data to inform activity planning
-- Stay within the budget constraint
+- Use weather to inform activity planning
+- Stay within budget
 - Respect travel style (budget/moderate/luxury)
-- Each day must have at least 3 activities
+- Each day must have at least 1 activity
 - Return complete JSON with no markdown formatting
 """
     
-    # Use existing messages or start with user request
+    # Use previous messages or start fresh
     if not state.messages:
-        state.messages.append({
-            "role": "user",
-            "content": state.user_feedback or f"Please plan my {state.trip['days']}-day trip to {state.trip['destination']} with a budget of ${state.trip['budget']}. Trip style: {state.trip['trip_style']}"
-        })
+        state.messages.append(
+            HumanMessage(content=state.user_feedback or f"Plan my {state.trip['days']}-day trip to {state.trip['destination']} with a budget of ${state.trip['budget']}. Trip style: {state.trip['trip_style']}")
+        )
     
-    # Call Claude with tools
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
-        system=system_prompt,
-        tools=[
-            {
-                "name": tool_name,
-                "description": tool_def["description"],
-                "input_schema": tool_def["parameters"]
-            }
-            for tool_name, tool_def in TOOLS.items()
-        ],
-        messages=state.messages
+    # Bind tools to model and invoke
+    llm_with_tools = llm.bind_tools(AGENT_TOOLS)
+    
+    response = llm_with_tools.invoke(
+        [SystemMessage(content=system_prompt)] + state.messages
     )
     
-    # Process response
-    state.messages.append({
-        "role": "assistant",
-        "content": response.content
-    })
+    # Add assistant response to messages
+    state.messages.append(response)
     
-    # Check for tool use
-    tool_use_blocks = [block for block in response.content if hasattr(block, 'type') and block.type == "tool_use"]
+    # Check if model called tools
+    if response.tool_calls:
+        # Route to tool execution
+        return Command(goto="tools")
     
-    if tool_use_blocks and state.tool_iteration_count < MAX_TOOL_ITERATIONS:
-        # Execute tools and continue loop
-        state.tool_iteration_count += 1
-        
-        tool_results = []
-        for tool_block in tool_use_blocks:
-            tool_name = tool_block.name
-            tool_input = tool_block.input
+    # No tools called - model returned final answer
+    # Extract JSON from response
+    try:
+        # Try to extract JSON from text
+        text = response.content
+        if isinstance(text, str):
+            # Remove markdown formatting if present
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
             
-            result = execute_tool(tool_name, tool_input)
-            
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": tool_block.id,
-                "content": json.dumps(result)
-            })
-        
-        # Add tool results to messages
-        state.messages.append({
-            "role": "user",
-            "content": tool_results
-        })
-        
-        # Continue agent loop (recursive call via graph)
-        return state
-    
-    elif state.tool_iteration_count >= MAX_TOOL_ITERATIONS:
-        state.error = f"Maximum tool iterations ({MAX_TOOL_ITERATIONS}) reached"
-        return state
-    
-    # No more tools - extract final response
-    text_blocks = [block for block in response.content if hasattr(block, 'type') and block.type == "text"]
-    
-    if text_blocks:
-        final_text = "".join(block.text for block in text_blocks)
-        
-        # Try to extract JSON
-        try:
-            # Clean markdown if present
-            cleaned = final_text.strip()
-            if cleaned.startswith("```json"):
-                cleaned = cleaned[7:]
-            if cleaned.startswith("```"):
-                cleaned = cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            
-            itinerary_json = json.loads(cleaned.strip())
+            itinerary_json = json.loads(text.strip())
             
             # Validate against schema
             itinerary = StructuredItinerary(**itinerary_json)
             state.itinerary_draft = itinerary.model_dump()
             state.approval_state = "draft_ready"
-            
-        except json.JSONDecodeError as e:
-            state.error = f"Failed to parse itinerary JSON: {str(e)}"
-        except Exception as e:
-            state.error = f"Itinerary validation failed: {str(e)}"
-    else:
-        state.error = "Agent did not return valid output"
+        else:
+            state.error = "Model did not return valid JSON"
+            return Command(goto="end")
     
-    return state
+    except json.JSONDecodeError as e:
+        state.error = f"Failed to parse itinerary JSON: {str(e)}"
+        return Command(goto="end")
+    except Exception as e:
+        state.error = f"Itinerary validation failed: {str(e)}"
+        return Command(goto="end")
+    
+    return Command(goto="validate")
 
 
-# ============================================================================
-# CONDITIONAL ROUTING
-# ============================================================================
-
-def should_continue_agent(state: AgentState) -> str:
+def process_tool_calls(state: AgentState) -> Command:
     """
-    Determine whether to continue the agent loop or finish.
+    Process tool calls from the model.
+    
+    LangGraph's ToolNode handles the actual execution.
+    This node routes after tool execution.
     """
-    if state.error:
-        return "error"
     
-    if state.approval_state == "draft_ready":
-        return "validate"
+    # Check iteration limit
+    # Count tool_use blocks in messages
+    tool_call_count = sum(
+        1 for msg in state.messages 
+        if hasattr(msg, 'tool_calls') and msg.tool_calls
+    )
     
-    if state.approval_state == "revising":
-        return "agent"
+    if tool_call_count >= MAX_ITERATIONS:
+        state.error = f"Maximum tool iterations ({MAX_ITERATIONS}) reached"
+        return Command(goto="end")
     
-    # Keep calling agent if still in planning
-    if state.approval_state == "planning" and state.tool_iteration_count < MAX_TOOL_ITERATIONS:
-        return "agent"
-    
-    return "end"
+    # Continue to agent to process tool results
+    return Command(goto="agent")
 
 
-def validate_itinerary_node(state: AgentState) -> AgentState:
+def validate_itinerary_node(state: AgentState) -> Command:
     """
-    Validate the generated itinerary against schema and business rules.
+    Validate the generated itinerary.
     """
+    
     if state.error or not state.itinerary_draft:
-        return state
+        return Command(goto="end")
     
     try:
         # Already validated in agent_node, but double-check
@@ -286,18 +253,18 @@ def validate_itinerary_node(state: AgentState) -> AgentState:
         # Business rule checks
         if len(itinerary.days) != state.trip['days']:
             state.error = f"Itinerary has {len(itinerary.days)} days, trip is {state.trip['days']} days"
-            return state
+            return Command(goto="end")
         
         total_cost = itinerary.metadata.total_estimated_cost or 0
         if total_cost > state.trip['budget'] * 1.1:  # Allow 10% over
-            state.warning = f"Estimated cost ${total_cost:.2f} exceeds budget ${state.trip['budget']}"
+            print(f"Warning: Estimated cost ${total_cost:.2f} exceeds budget ${state.trip['budget']}")
         
         state.approval_state = "draft_ready"
-        
+        return Command(goto="end")
+    
     except Exception as e:
         state.error = f"Validation failed: {str(e)}"
-    
-    return state
+        return Command(goto="end")
 
 
 # ============================================================================
@@ -307,57 +274,29 @@ def validate_itinerary_node(state: AgentState) -> AgentState:
 def build_agent_graph():
     """
     Construct the LangGraph workflow.
-    
-    Returns:
-        Compiled graph that can be invoked with state.
     """
     
     graph = StateGraph(AgentState)
     
     # Add nodes
-    graph.add_node("retrieve_trip", lambda s: s)  # Placeholder - handled in invoke
     graph.add_node("agent", agent_node)
+    graph.add_node("tools", ToolNode(AGENT_TOOLS))  # Built-in LangGraph tool execution
     graph.add_node("validate", validate_itinerary_node)
     
     # Set entry point
     graph.set_entry_point("agent")
     
     # Add edges
-    graph.add_conditional_edges(
-        "agent",
-        should_continue_agent,
-        {
-            "agent": "agent",
-            "validate": "validate",
-            "error": END,
-            "end": END
-        }
-    )
-    
+    graph.add_edge("tools", "agent")  # After tools, back to agent
     graph.add_edge("validate", END)
-
-    conn = sqlite3.connect(
-        CHECKPOINT_DIR,
-        check_same_thread=False
-    )
     
-    # Compile with checkpointer for state persistence
-    checkpointer = SqliteSaver(conn)
-    checkpointer.setup()
+    # Compile with checkpointer
     compiled_graph = graph.compile(checkpointer=checkpointer)
     
     return compiled_graph
 
 
-# Global graph instance
-agent_graph = None
-
-def get_agent_graph():
-    """Get or create the compiled agent graph."""
-    global agent_graph
-    if agent_graph is None:
-        agent_graph = build_agent_graph()
-    return agent_graph
+agent_graph = build_agent_graph()
 
 
 # ============================================================================
@@ -373,13 +312,13 @@ def run_agent(
     user_feedback: str = None
 ) -> AgentState:
     """
-    Run the vacation planner agent for a given trip and request.
+    Run the vacation planner agent for a given trip.
     
     Args:
         trip_id: Database trip ID
         user_id: Authenticated user ID
         message: User's request message
-        thread_id: Conversation thread ID for checkpointing
+        thread_id: Conversation thread ID
         db: Database session
         user_feedback: Optional revision feedback
         
@@ -400,13 +339,9 @@ def run_agent(
     if state.error:
         return state
     
-    # Run the agent graph
-    graph = get_agent_graph()
-    
+    # Run the graph
     config = {"configurable": {"thread_id": thread_id}}
     
-    # Invoke graph - it will handle the tool loop internally
-    final_state = graph.invoke(state, config=config)
+    final_state = agent_graph.invoke(state, config=config)
     
     return final_state
-    

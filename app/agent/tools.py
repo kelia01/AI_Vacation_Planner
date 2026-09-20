@@ -1,14 +1,15 @@
 """
 Tool implementations for the vacation planning agent.
 
-Tools allow the agent to gather information and make decisions.
+Tools are defined using LangChain @tool decorator for proper integration.
 """
 
 import json
 from typing import Any, Dict
 from langchain.tools import tool
-from app.services.weather_service import get_weather
+
 from app.services.rag_service import rag_service
+from app.services.weather_service import get_weather
 
 
 # ============================================================================
@@ -16,7 +17,7 @@ from app.services.rag_service import rag_service
 # ============================================================================
 
 @tool
-def weather_tool(destination: str) -> Dict[str, Any]:
+def get_weather_tool(destination: str) -> Dict[str, Any]:
     """
     Get current and forecast weather for a destination.
     
@@ -38,8 +39,13 @@ def weather_tool(destination: str) -> Dict[str, Any]:
 # ============================================================================
 # RAG/TRAVEL KNOWLEDGE TOOL
 # ============================================================================
+
 @tool
-def search_travel_knowledge_tool(query: str, destination: str = "", top_k: int = 3) -> Dict[str, Any]:
+def search_travel_knowledge_tool(
+    query: str, 
+    destination: str = "", 
+    top_k: int = 3
+) -> Dict[str, Any]:
     """
     Search the travel knowledge base for relevant information.
     
@@ -54,7 +60,6 @@ def search_travel_knowledge_tool(query: str, destination: str = "", top_k: int =
         Retrieved knowledge documents and context.
     """
     try:
-        rag_service.initialize()
         results = rag_service.search(
             query=query,
             destination=destination if destination else None,
@@ -62,7 +67,11 @@ def search_travel_knowledge_tool(query: str, destination: str = "", top_k: int =
         )
         
         if not results:
-            return {"status": "success", "data": [], "message": "No matching travel knowledge found"}
+            return {
+                "status": "success", 
+                "data": [], 
+                "message": "No matching travel knowledge found"
+            }
         
         formatted_results = [
             {
@@ -81,8 +90,13 @@ def search_travel_knowledge_tool(query: str, destination: str = "", top_k: int =
 # ============================================================================
 # PLACES/ATTRACTIONS TOOL
 # ============================================================================
+
 @tool
-def search_places_tool(destination: str, activity_type: str = "", radius_km: int = 20) -> Dict[str, Any]:
+def search_places_tool(
+    destination: str, 
+    activity_type: str = "", 
+    radius_km: int = 20
+) -> Dict[str, Any]:
     """
     Search for places and attractions in a destination.
     
@@ -99,8 +113,6 @@ def search_places_tool(destination: str, activity_type: str = "", radius_km: int
     Returns:
         List of places with location data.
     """
-    # In production, call actual API
-    # For now, return structured empty response
     try:
         return {
             "status": "success",
@@ -110,7 +122,7 @@ def search_places_tool(destination: str, activity_type: str = "", radius_km: int
                     "type": activity_type or "landmark",
                     "location": destination,
                     "rating": 4.5,
-                    "note": "Integration with Google Places API recommended for production"
+                    "note": "Google Places API integration needed for production"
                 }
             ],
             "message": "Places search - API integration required for full functionality"
@@ -122,8 +134,13 @@ def search_places_tool(destination: str, activity_type: str = "", radius_km: int
 # ============================================================================
 # COST ESTIMATION TOOL
 # ============================================================================
+
 @tool
-def estimate_costs_tool(destination: str, days: int, trip_style: str = "moderate") -> Dict[str, Any]:
+def estimate_costs_tool(
+    destination: str, 
+    days: int, 
+    trip_style: str = "moderate"
+) -> Dict[str, Any]:
     """
     Estimate travel costs for a destination.
     
@@ -140,7 +157,6 @@ def estimate_costs_tool(destination: str, days: int, trip_style: str = "moderate
     Returns:
         Cost breakdown by category.
     """
-    # Simplified cost estimation model
     cost_ranges = {
         "budget": {"accommodation": 40, "food": 20, "activities": 15, "transport": 10},
         "moderate": {"accommodation": 100, "food": 50, "activities": 50, "transport": 30},
@@ -190,113 +206,12 @@ def estimate_costs_tool(destination: str, days: int, trip_style: str = "moderate
 
 
 # ============================================================================
-# TOOL REGISTRY
+# TOOL LIST FOR LANGGRAPH
 # ============================================================================
 
-TOOLS = {
-    "get_weather": {
-        "function": weather_tool,
-        "description": "Get weather forecast for a destination before planning activities",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "destination": {
-                    "type": "string",
-                    "description": "Destination city or country"
-                }
-            },
-            "required": ["destination"]
-        }
-    },
-    "search_travel_knowledge": {
-        "function": search_travel_knowledge_tool,
-        "description": "Search travel knowledge base for tips, attractions, and destination guidance",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query (e.g., 'best museums', 'local food', 'safe neighborhoods')"
-                },
-                "destination": {
-                    "type": "string",
-                    "description": "Optional destination filter"
-                },
-                "top_k": {
-                    "type": "integer",
-                    "description": "Number of results to return (default 3)"
-                }
-            },
-            "required": ["query"]
-        }
-    },
-    "search_places": {
-        "function": search_places_tool,
-        "description": "Find attractions, restaurants, museums, parks, and points of interest in a destination",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "destination": {
-                    "type": "string",
-                    "description": "Destination city or area"
-                },
-                "activity_type": {
-                    "type": "string",
-                    "description": "Type of place (museums, restaurants, parks, landmarks, etc.)"
-                },
-                "radius_km": {
-                    "type": "integer",
-                    "description": "Search radius in kilometers (default 20)"
-                }
-            },
-            "required": ["destination"]
-        }
-    },
-    "estimate_costs": {
-        "function": estimate_costs_tool,
-        "description": "Estimate travel costs for accommodations, food, activities, and transport",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "destination": {
-                    "type": "string",
-                    "description": "Destination city or country"
-                },
-                "days": {
-                    "type": "integer",
-                    "description": "Number of days in the trip"
-                },
-                "trip_style": {
-                    "type": "string",
-                    "description": "Budget style: 'budget', 'moderate', or 'luxury'"
-                }
-            },
-            "required": ["destination", "days"]
-        }
-    }
-}
-
-
-def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Execute a tool by name with given input.
-    
-    Args:
-        tool_name: Name of the tool
-        tool_input: Tool input parameters
-        
-    Returns:
-        Tool result
-    """
-    if tool_name not in TOOLS:
-        return {"status": "error", "message": f"Unknown tool: {tool_name}"}
-    
-    tool_def = TOOLS[tool_name]
-    tool_fn = tool_def["function"]
-    
-    try:
-        return tool_fn(**tool_input)
-    except TypeError as e:
-        return {"status": "error", "message": f"Invalid tool parameters: {str(e)}"}
-    except Exception as e:
-        return {"status": "error", "message": f"Tool execution error: {str(e)}"}
+AGENT_TOOLS = [
+    get_weather_tool,
+    search_travel_knowledge_tool,
+    search_places_tool,
+    estimate_costs_tool
+]

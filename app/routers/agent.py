@@ -1,13 +1,5 @@
-"""
-API routes for the vacation planning agent workflow.
-
-Endpoints for planning, approval, and revision of itineraries.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-from typing import Optional
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -15,51 +7,14 @@ from app.models import User
 from app.agent import run_agent, StructuredItinerary
 from app.services import trip_service
 from app import crud, schemas
-
+from app.agent.schemas import (  
+    PlanningRequest,
+    PlanningResponse,
+    ReviewRequest,
+    ReviewResponse
+)
 
 router = APIRouter(prefix="/agent", tags=["agent"])
-
-
-# ============================================================================
-# SCHEMAS
-# ============================================================================
-
-class PlanningRequest(BaseModel):
-    """Request to plan an itinerary."""
-    trip_id: int = Field(..., description="Trip to plan")
-    message: Optional[str] = Field(None, description="Additional planning instructions")
-
-
-class PlanningResponse(BaseModel):
-    """Response with draft itinerary."""
-    status: str = Field(..., description="'success' or 'error'")
-    thread_id: str = Field(..., description="Conversation thread ID")
-    itinerary: Optional[dict] = Field(None, description="Draft itinerary")
-    error: Optional[str] = Field(None, description="Error message if any")
-
-
-class ApprovalRequest(BaseModel):
-    """Request to approve a draft itinerary."""
-    thread_id: str = Field(..., description="Thread ID of planning conversation")
-
-
-class RevisionRequest(BaseModel):
-    """Request revisions to the draft itinerary."""
-    thread_id: str = Field(..., description="Thread ID of planning conversation")
-    feedback: str = Field(..., description="Revision feedback for the agent")
-
-
-class RevisionResponse(BaseModel):
-    """Response with revised itinerary."""
-    status: str = Field(..., description="'success' or 'error'")
-    thread_id: str
-    itinerary: Optional[dict] = Field(None, description="Revised itinerary")
-    error: Optional[str] = None
-
-
-# ============================================================================
-# ENDPOINTS
-# ============================================================================
 
 @router.post("/plan", response_model=PlanningResponse, status_code=status.HTTP_200_OK)
 def plan_itinerary(
@@ -84,10 +39,7 @@ def plan_itinerary(
     try:
         trip = trip_service.get_trip_by_id(db, request.trip_id, current_user.id)
     except HTTPException:
-        raise HTTPException(
-            status_code=404,
-            detail="Trip not found"
-        )
+        raise HTTPException(status_code=404, detail="Trip not found")
     
     # Generate thread ID for this planning session
     thread_id = f"trip_{request.trip_id}_user_{current_user.id}_{id(request)}"
@@ -130,78 +82,22 @@ def plan_itinerary(
         )
 
 
-@router.post("/approve", status_code=status.HTTP_201_CREATED)
-def approve_itinerary(
-    request: ApprovalRequest,
+@router.post("/review", response_model=ReviewResponse, status_code=status.HTTP_200_OK)
+def review_itinerary(
+    request: ReviewRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Approve the draft itinerary and save it to the database.
+    Review the draft itinerary.
     
-    Args:
-        request: Contains thread_id from planning request
-        
+    Actions:
+    - 'approve': Saves the itinerary to database
+    - 'revise': Agent re-enters loop with feedback
+    
     Returns:
-        Created itinerary with ID
-    """
-    
-    # Extract trip_id from thread_id
-    # Format: trip_{trip_id}_user_{user_id}_...
-    try:
-        parts = request.thread_id.split("_")
-        trip_id = int(parts[1])
-    except (IndexError, ValueError):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid thread_id format"
-        )
-    
-    # Verify trip ownership
-    try:
-        trip = trip_service.get_trip_by_id(db, trip_id, current_user.id)
-    except HTTPException:
-        raise HTTPException(
-            status_code=404,
-            detail="Trip not found"
-        )
-    
-    # In production, retrieve the draft from state store or cache
-    # For now, we accept the approval and the client must re-provide the itinerary
-    # This is a simplified implementation
-    
-    # Note: Full implementation would:
-    # 1. Retrieve state from LangGraph checkpointer
-    # 2. Verify itinerary_draft exists
-    # 3. Convert to legacy format
-    # 4. Save via CRUD
-    
-    raise HTTPException(
-        status_code=501,
-        detail="Approval endpoint requires state retrieval from checkpointer - see implementation notes"
-    )
-
-
-@router.post("/revise", response_model=RevisionResponse, status_code=status.HTTP_200_OK)
-def revise_itinerary(
-    request: RevisionRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Request revisions to the draft itinerary.
-    
-    The agent re-enters the planning loop with your feedback and may:
-    - Fetch new tool data
-    - Regenerate activities
-    - Adjust costs
-    - Return a revised itinerary
-    
-    Args:
-        request: Contains thread_id and revision feedback
-        
-    Returns:
-        Revised itinerary draft
+        If approve: Saved itinerary with ID
+        If revise: Revised draft itinerary
     """
     
     # Extract trip_id from thread_id
@@ -209,116 +105,69 @@ def revise_itinerary(
         parts = request.thread_id.split("_")
         trip_id = int(parts[1])
     except (IndexError, ValueError):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid thread_id format"
-        )
+        raise HTTPException(status_code=400, detail="Invalid thread_id format")
     
     # Verify trip ownership
     try:
         trip = trip_service.get_trip_by_id(db, trip_id, current_user.id)
     except HTTPException:
-        raise HTTPException(
-            status_code=404,
-            detail="Trip not found"
-        )
+        raise HTTPException(status_code=404, detail="Trip not found")
     
-    # Run the agent again with feedback in revision mode
-    try:
-        agent_state = run_agent(
-            trip_id=trip_id,
-            user_id=current_user.id,
-            message="",  # Use feedback below
-            thread_id=request.thread_id,
-            db=db,
-            user_feedback=request.feedback
-        )
-        
-        if agent_state.error:
-            return RevisionResponse(
+    if request.action == "approve":
+        # Save the itinerary
+        try:
+            structured = StructuredItinerary(**request.itinerary_data)
+            legacy_format = structured.to_legacy_format()
+            legacy_format["trip_id"] = trip_id
+            
+            itinerary_create = schemas.ItineraryCreate(**legacy_format)
+            db_itinerary = crud.create_itinerary(db, itinerary_create, current_user.id)
+            
+            if not db_itinerary:
+                raise HTTPException(status_code=400, detail="Failed to create itinerary")
+            
+            return ReviewResponse(
+                status="success",
+                thread_id=request.thread_id,
+                saved_id=db_itinerary.id
+            )
+            
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=f"Invalid itinerary: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save: {str(e)}")
+    
+    elif request.action == "revise":
+        # Re-enter agent with feedback
+        try:
+            agent_state = run_agent(
+                trip_id=trip_id,
+                user_id=current_user.id,
+                message="",
+                thread_id=request.thread_id,
+                db=db,
+                user_feedback=request.feedback
+            )
+            
+            if agent_state.error:
+                return ReviewResponse(
+                    status="error",
+                    thread_id=request.thread_id,
+                    error=agent_state.error
+                )
+            
+            return ReviewResponse(
+                status="success",
+                thread_id=request.thread_id,
+                itinerary=agent_state.itinerary_draft
+            )
+            
+        except Exception as e:
+            return ReviewResponse(
                 status="error",
                 thread_id=request.thread_id,
-                error=agent_state.error
+                error=f"Revision failed: {str(e)}"
             )
-        
-        if agent_state.approval_state != "draft_ready":
-            return RevisionResponse(
-                status="error",
-                thread_id=request.thread_id,
-                error="Agent failed to generate revised itinerary"
-            )
-        
-        return RevisionResponse(
-            status="success",
-            thread_id=request.thread_id,
-            itinerary=agent_state.itinerary_draft
-        )
-        
-    except Exception as e:
-        return RevisionResponse(
-            status="error",
-            thread_id=request.thread_id,
-            error=f"Revision failed: {str(e)}"
-        )
-
-
-@router.post("/save-itinerary", response_model=schemas.ItineraryResponse, status_code=status.HTTP_201_CREATED)
-def save_itinerary(
-    trip_id: int,
-    itinerary_data: dict,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Save an approved itinerary to the database.
     
-    This endpoint converts the structured itinerary to the legacy format
-    and persists it via CRUD.
-    
-    Args:
-        trip_id: Trip ID
-        itinerary_data: Structured itinerary dictionary
-        
-    Returns:
-        Persisted itinerary
-    """
-    
-    # Verify trip ownership
-    try:
-        trip = trip_service.get_trip_by_id(db, trip_id, current_user.id)
-    except HTTPException:
-        raise HTTPException(
-            status_code=404,
-            detail="Trip not found"
-        )
-    
-    try:
-        # Validate the itinerary structure
-        structured = StructuredItinerary(**itinerary_data)
-        
-        # Convert to legacy format
-        legacy_format = structured.to_legacy_format()
-        legacy_format["trip_id"] = trip_id
-        
-        # Create itinerary using CRUD
-        itinerary_create = schemas.ItineraryCreate(**legacy_format)
-        db_itinerary = crud.create_itinerary(db, itinerary_create, current_user.id)
-        
-        if not db_itinerary:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to create itinerary"
-            )
-        
-        return schemas.ItineraryResponse.model_validate(db_itinerary)
-        
-    except ValueError as e:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid itinerary structure: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to save itinerary: {str(e)}"
-        )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'approve' or 'revise'")
