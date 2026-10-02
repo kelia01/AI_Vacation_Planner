@@ -2,7 +2,7 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import engine, Base
-from app.routers import auth, users, trips, itineraries
+from app.routers import auth, users, trips, itineraries, agent
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,6 +24,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(trips.router)
 app.include_router(itineraries.router)
+app.include_router(agent.router)
 
 def custom_openapi():
     if app.openapi_schema:
@@ -72,6 +73,7 @@ def root():
             "User Authentication",
             "Trip CRUD",
             "Itinerary Management",
+            "Agent-Based Planning"
         ],
         "docs": "/docs"
     }

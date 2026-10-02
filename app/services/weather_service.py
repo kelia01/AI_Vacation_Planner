@@ -20,6 +20,8 @@ def get_weather(destination: str):
 
     geo_data = geo.json()
 
+    print(f"[DEBUG] Geocoding '{destination}': {geo_data}")
+
     if not geo_data.get("results"):
         return {
             "error": f"Could not find {destination}"
