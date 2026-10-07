@@ -66,10 +66,9 @@ app/
 ├── agent/
 │   ├── graph.py                   # LangGraph workflow
 │   ├── state.py                   # AgentState TypedDict
-│   ├── tools.py                   # AGENT_TOOLS: weather + RAG
 │   ├── mcp_tools.py               # MCP_TOOLS: LangChain wrappers
 │   ├── mcp_client.py              # MCP stdio client
-│   ├── mcp_server.py              # MCP server: weather, places, calendar
+│   ├── mcp_server.py              # MCP server: weather, places, calendar, RAG
 │   ├── itinerary_models.py        # StructuredItinerary Pydantic models
 │   └── agent_schemas.py           # Agent-specific API schemas
 │
@@ -169,6 +168,7 @@ Exposes 4 tools across 3 travel domains (weather, maps, calendar):
 | `find_places` | Maps | Restaurants, hotels, museums near destination | OpenStreetMap Overpass API (free) |
 | `check_calendar` | Calendar | Check vacation calendar for date conflicts | In-process calendar store |
 | `add_to_calendar` | Calendar | Add an activity to the vacation calendar | In-process calendar store |
+| `RAG` | uses RAG service
 
 Geocoding (city name → lat/lon) uses the Open-Meteo geocoding API.
 
@@ -197,7 +197,7 @@ Six `@tool` decorated async functions the LLM can call:
 | Planning agent | `claude-haiku-4-5` | Anthropic | Itinerary generation + tool orchestration |
 | Image analysis | `claude-haiku-4-5` | Anthropic | Vision — destination image understanding |
 
-Tools are bound with `llm.bind_tools(ALL_TOOLS)` where `ALL_TOOLS = AGENT_TOOLS + MCP_TOOLS`.
+Tools are bound with `llm.bind_tools(MCP_TOOLS)` where `MCP_TOOLS`.
 
 ---
 
@@ -211,8 +211,7 @@ POST /agent/plan  (multipart/form-data)
   │
   ▼
 LangGraph agent
-  ├── calls MCP tools (weather, places, calendar)
-  ├── calls AGENT_TOOLS (direct weather, RAG knowledge base)
+  ├── calls MCP tools (weather, places, calendar, RAG knowledge)
   └── returns structured JSON itinerary
   │
   ▼
@@ -241,12 +240,11 @@ FastAPI Routers
         │
         ├── agent_node  ──► ToolNode ──► agent_node (loop, max 5 iterations)
         │                     │
-        │                     ├── AGENT_TOOLS
-        │                     │     ├── weather_tool (Open-Meteo direct)
-        │                     │     └── search_travel_knowledge_tool (ChromaDB RAG)
+        │                     │ 
         │                     │
         │                     └── MCP_TOOLS (via MCP stdio client)
         │                           ├── get_weather_mcp
+        |                           ├──search_travel_knowledge_tool (ChromaDB RAG)
         │                           ├── find_restaurants/hotels/museums_mcp
         │                           ├── check_calendar_mcp
         │                           └── add_to_calendar_mcp

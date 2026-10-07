@@ -14,7 +14,6 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from app.agent.state import AgentState
 from app.agent.itinerary_models import StructuredItinerary
-from app.agent.tools import AGENT_TOOLS
 from app.agent.mcp_tools import MCP_TOOLS
 from app.services import trip_service
 import sqlite3
@@ -30,8 +29,6 @@ CHECKPOINT_FILE = CHECKPOINT_DIR / "agent.db"
 
 conn = sqlite3.connect(str(CHECKPOINT_FILE), check_same_thread=False)
 checkpointer = SqliteSaver(conn)
-
-ALL_TOOLS = AGENT_TOOLS + MCP_TOOLS
 
 
 # ============================================================================
@@ -132,7 +129,7 @@ Rules:
     if tool_call_count >= MAX_ITERATIONS:
         return Command(goto=END, update={"error": f"Maximum tool iterations ({MAX_ITERATIONS}) reached"})
 
-    llm_with_tools = llm.bind_tools(ALL_TOOLS)
+    llm_with_tools = llm.bind_tools(MCP_TOOLS)
     response = llm_with_tools.invoke([SystemMessage(content=system_prompt)] + messages)
 
     if response.tool_calls:
@@ -196,7 +193,7 @@ def build_agent_graph():
     graph = StateGraph(AgentState)
 
     graph.add_node("agent", agent_node)
-    graph.add_node("tools", ToolNode(ALL_TOOLS))
+    graph.add_node("tools", ToolNode(MCP_TOOLS))
     graph.add_node("validate", validate_itinerary_node)
 
     graph.set_entry_point("agent")

@@ -179,6 +179,24 @@ out 5;
             type="text",
             text=f"Added: {entry['date']} at {entry['time']} — {entry['activity']}"
         )]
+        
+    elif name == "search_travel_knowledge":
+        query = arguments.get("query")
+        destination = arguments.get("destination", "")
+        
+        if not query:
+            return [TextContent(type="text", text="Error: Missing 'query' argument.")]
+            
+        try:
+            # Call your existing service logic
+            results = rag_service.search(query, destination=destination or None)
+            
+            # Convert results to a string so the LLM can read it
+            text_output = f"Knowledge base results for '{query}':\n" + str(results)
+            return [TextContent(type="text", text=text_output)]
+            
+        except Exception as e:
+            return [TextContent(type="text", text=f"RAG Service error: {e}")]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

@@ -37,6 +37,13 @@ async def add_to_calendar_mcp(date: str, activity: str, time: str = "10:00") -> 
     """Add an activity to the vacation calendar."""
     return await call_mcp_tool("add_to_calendar", {"date": date, "activity": activity, "time": time})
 
+@tool
+async def search_travel_knowledge_mcp(query: str, destination: str = "") -> str:
+    """Search the travel knowledge base for tips, FAQs, and destination info."""
+    return await call_mcp_tool(
+        "search_travel_knowledge", 
+        {"query": query, "destination": destination}
+    )
 
 MCP_TOOLS = [
     get_weather_mcp,
@@ -45,4 +52,5 @@ MCP_TOOLS = [
     find_museums_mcp,
     check_calendar_mcp,
     add_to_calendar_mcp,
+    search_travel_knowledge_mcp
 ]

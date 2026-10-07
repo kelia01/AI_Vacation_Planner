@@ -62,7 +62,6 @@ async def plan_itinerary(
 
     itinerary = agent_state.get("itinerary_draft")
 
-    # TTS is best-effort — a failure must not break the response
     audio_b64 = None
     tts_audio = text_to_speech(f"Your itinerary for {itinerary.get('metadata', {}).get('destination', 'your trip')} is ready.")
     if tts_audio:
@@ -98,9 +97,8 @@ def review_itinerary(
     if request.action == "approve":
         try:
             structured = StructuredItinerary(**request.itinerary_data)
-            legacy_format = structured.to_legacy_format()
-            legacy_format["trip_id"] = trip_id
-            itinerary_create = schemas.ItineraryCreate(**legacy_format)
+            structured["trip_id"] = trip_id
+            itinerary_create = schemas.ItineraryCreate(**structured)
             db_itinerary = itinerary_service.create_itinerary(db, itinerary_create, current_user.id)
             return ReviewResponse(status="success", thread_id=request.thread_id, saved_id=db_itinerary.id)
         except ValueError as e:

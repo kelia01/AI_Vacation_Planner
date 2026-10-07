@@ -242,19 +242,6 @@ def test_structured_itinerary_missing_activities():
     with pytest.raises(ValueError, match="at least one"):
         StructuredItinerary(**invalid_data)
 
-
-def test_legacy_format_conversion(sample_itinerary_draft):
-    """Test conversion from structured to legacy format."""
-    itinerary = StructuredItinerary(**sample_itinerary_draft)
-    legacy = itinerary.to_legacy_format()
-    
-    assert "trip_id" in legacy
-    assert "days" in legacy
-    assert len(legacy["days"]) == 3
-    assert legacy["days"][0]["day"] == 1
-    assert len(legacy["days"][0]["activities"]) == 3
-
-
 # ============================================================================
 # TEST: TOOLS
 # ============================================================================
