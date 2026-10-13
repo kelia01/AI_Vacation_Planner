@@ -10,13 +10,14 @@ from langchain.chat_models import init_chat_model
 from langgraph.graph import StateGraph, END
 from langgraph.types import Command
 from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+import aiosqlite
 
 from app.agent.state import AgentState
 from app.agent.itinerary_models import StructuredItinerary
 from app.agent.mcp_tools import MCP_TOOLS
 from app.services import trip_service
-import sqlite3
+from app.services.rag_service import rag_service
 
 
 MAX_ITERATIONS = 5
@@ -27,9 +28,8 @@ CHECKPOINT_DIR = Path(__file__).parent.parent.parent / "checkpoints"
 CHECKPOINT_DIR.mkdir(exist_ok=True)
 CHECKPOINT_FILE = CHECKPOINT_DIR / "agent.db"
 
-conn = sqlite3.connect(str(CHECKPOINT_FILE), check_same_thread=False)
-checkpointer = SqliteSaver(conn)
-
+async def _get_checkpointer():
+    return AsyncSqliteSaver(await aiosqlite.connect(str(CHECKPOINT_FILE)))
 
 # ============================================================================
 # NODES
@@ -65,6 +65,12 @@ def agent_node(state: AgentState) -> Command:
         return Command(goto=END, update={"error": "Trip not loaded", "approval_state": "error"})
 
     trip = state["trip"]
+    
+    rag_context = rag_service.get_context(
+        query=f"travel tips for {trip['destination']}",
+        destination=trip["destination"]
+    )
+    
     system_prompt = f"""You are an expert vacation planning assistant. Use the available tools to:
 1. Check weather for the destination
 2. Find restaurants, hotels, and museums
@@ -75,6 +81,9 @@ TRIP DETAILS:
 - Duration: {trip['days']} days
 - Budget: ${trip['budget']}
 - Travel Style: {trip['trip_style']}
+
+TRAVEL KNOWLEDGE BASE:
+{rag_context if rag_context else "No additional knowledge available."}
 
 Return ONLY valid JSON matching this schema (no markdown, no extra text):
 
@@ -189,7 +198,7 @@ def validate_itinerary_node(state: AgentState) -> Command:
 # BUILD GRAPH
 # ============================================================================
 
-def build_agent_graph():
+def build_agent_graph(checkpointer):
     graph = StateGraph(AgentState)
 
     graph.add_node("agent", agent_node)
@@ -203,14 +212,11 @@ def build_agent_graph():
     return graph.compile(checkpointer=checkpointer)
 
 
-agent_graph = build_agent_graph()
-
-
 # ============================================================================
 # AGENT INVOCATION
 # ============================================================================
 
-def run_agent(
+async def run_agent(
     trip_id: int,
     user_id: int,
     message: str,
@@ -233,6 +239,9 @@ def run_agent(
     state_with_trip = retrieve_trip_node(initial_state, db)
     if state_with_trip.get("error"):
         return state_with_trip
-
+    
+    checkpointer = await _get_checkpointer()
+    graph = build_agent_graph(checkpointer)
+    
     config = {"configurable": {"thread_id": thread_id}}
-    return agent_graph.ainvoke(state_with_trip, config=config)
+    return await graph.ainvoke(state_with_trip, config=config)

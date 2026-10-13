@@ -7,6 +7,7 @@ from mcp.server.stdio import stdio_server
 from mcp.server.models import InitializationOptions
 from mcp.types import Tool, TextContent, ServerCapabilities
 
+
 logging.basicConfig(level=logging.INFO)
 
 server = Server("vacation-planner")

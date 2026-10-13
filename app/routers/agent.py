@@ -76,7 +76,7 @@ async def plan_itinerary(
 
 
 @router.post("/review", response_model=ReviewResponse, status_code=status.HTTP_200_OK)
-def review_itinerary(
+async def review_itinerary(
     request: ReviewRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -110,7 +110,7 @@ def review_itinerary(
 
     elif request.action == "revise":
         try:
-            agent_state = run_agent(
+            agent_state = await run_agent(
                 trip_id=trip_id,
                 user_id=current_user.id,
                 message="",
