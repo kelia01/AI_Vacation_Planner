@@ -227,19 +227,19 @@ async def run_agent(
         "user_feedback": user_feedback or message,
         "error": None,
     }
-    
-    user_msg = user_feedback or message or (
-        f"Plan my {state_with_trip['trip']['days']}-day trip to "
-        f"{state_with_trip['trip']['destination']} "
-        f"with a budget of ${state_with_trip['trip']['budget']}. "
-        f"Style: {state_with_trip['trip']['trip_style']}"
-    )
-
-    initial_state["messages"] = [HumanMessage(content=user_msg)]
+    initial_state["messages"] = [HumanMessage(content=user_feedback or message or "Plan my trip")]
     
     state_with_trip = retrieve_trip_node(initial_state, db)
     if state_with_trip.get("error"):
         return state_with_trip
+    
+    if not (user_feedback or message):
+        trip = state_with_trip["trip"]
+        default_msg = (
+            f"Plan my {trip['days']}-day trip to {trip['destination']} "
+            f"with a budget of ${trip['budget']}. Style: {trip['trip_style']}"
+        )
+        state_with_trip["messages"] = [HumanMessage(content=default_msg)]
     
     checkpointer = await _get_checkpointer()
     graph = build_agent_graph(checkpointer)
