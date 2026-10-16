@@ -105,8 +105,4 @@ class ItineraryResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        
-class AskQuestionRequest(BaseModel):
-    question: str
-    trip_id: Optional[int] = None
 

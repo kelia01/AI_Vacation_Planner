@@ -67,19 +67,17 @@ class StructuredItinerary(BaseModel):
             raise ValueError(f"Days must be numbered 1 to {len(days)}, got {numbers}")
         
         return days
-    
+
     def to_legacy_format(self) -> dict:
-        """
-        Convert to Phase 4 itinerary format for database persistence.
-        
-        Returns dict compatible with existing ItineraryCreate schema.
-        """
+        """Convert to ItineraryCreate-compatible dict (trip_id excluded)."""
         return {
-            "trip_id": 0,  # Set by caller
             "days": [
                 {
                     "day": day.day_number,
-                    "activities": [f"{a.name}" + (f" ({a.time})" if a.time else "") for a in day.activities]
+                    "activities": [
+                        f"{a.name}" + (f" ({a.time})" if a.time else "") + (f": {a.description}" if a.description else "")
+                        for a in day.activities
+                ],
                 }
                 for day in self.days
             ]
