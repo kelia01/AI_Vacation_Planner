@@ -34,25 +34,31 @@ async def plan_itinerary(
     except HTTPException:
         raise HTTPException(status_code=404, detail="Trip not found")
 
-    # Normalize multimodal inputs into a single text message
+    parts = []
+    if text:
+        parts.append(f"Instructions: {text}")
+    
     if audio:
         audio_bytes = await audio.read()
         if audio_bytes:
-            text = transcribe_audio(audio_bytes)
+            transcript = transcribe_audio(audio_bytes)
+            parts.append(f"Voice request: {transcript}")
 
     if image:
         image_bytes = await image.read()
         content_type = image.content_type  # pass real content-type to avoid hardcoded jpeg
         if image_bytes:
             image_context = analyze_image(image_bytes, content_type=content_type)
-            text = f"{text or ''}\nImage context: {image_context}".strip()
+            parts.append(f"Image context: {image_context}")
+
+    combined_text = "\n".join(parts) if parts else "Plan my trip"
 
     thread_id = f"trip_{trip_id}_user_{current_user.id}_{uuid.uuid4().hex[:8]}"
 
     agent_state = await run_agent(
         trip_id=trip_id,
         user_id=current_user.id,
-        message=text or "Plan my trip",
+        message=combined_text,
         thread_id=thread_id,
         db=db,
     )
@@ -97,8 +103,9 @@ async def review_itinerary(
     if request.action == "approve":
         try:
             structured = StructuredItinerary(**request.itinerary_data)
-            structured["trip_id"] = trip_id
-            itinerary_create = schemas.ItineraryCreate(**structured)
+            legacy_format = structured.to_legacy_format()
+            legacy_format["trip_id"] = trip_id
+            itinerary_create = schemas.ItineraryCreate(**legacy_format)
             db_itinerary = itinerary_service.create_itinerary(db, itinerary_create, current_user.id)
             return ReviewResponse(status="success", thread_id=request.thread_id, saved_id=db_itinerary.id)
         except ValueError as e:

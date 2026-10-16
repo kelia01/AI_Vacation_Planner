@@ -75,7 +75,11 @@ def text_to_speech(text: str) -> bytes | None:
         return None
     try:
         client = ElevenLabs(api_key=api_key)
-        audio_generator = client.generate(text=text, voice="Rachel")
-        return b"".join(audio_generator)
+        audio_bytes = client.text_to_speech.convert(
+            voice_id="21m00Tcm4TlvDq8ikWAM",
+            text=text,
+            model_id="eleven_monolingual_v1",
+        )
+        return b"".join(audio_bytes)
     except Exception:
         return None

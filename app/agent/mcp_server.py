@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import requests
 from mcp.server import Server
@@ -17,7 +16,21 @@ GEOCODE_API = "https://geocoding-api.open-meteo.com/v1/search"
 OVERPASS_API = "https://overpass-api.de/api/interpreter"
 
 # In-process calendar (per server lifetime)
-CALENDAR_DATA: dict = {"bookings": []}
+import json
+from pathlib import Path
+
+_CALENDAR_FILE = Path(__file__).parent.parent.parent / "checkpoints" / "calendar.json"
+
+
+def _load_calendar() -> dict:
+    if _CALENDAR_FILE.exists():
+        return json.loads(_CALENDAR_FILE.read_text())
+    return {"bookings": []}
+
+
+def _save_calendar(data: dict):
+    _CALENDAR_FILE.parent.mkdir(exist_ok=True)
+    _CALENDAR_FILE.write_text(json.dumps(data))
 
 
 def geocode(location: str) -> tuple[float | None, float | None]:
@@ -90,6 +103,19 @@ async def list_tools():
                 "required": ["date", "activity"]
             }
         ),
+        Tool(
+    name="search_travel_knowledge",
+    description="Search the travel knowledge base for destination tips and FAQs",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "destination": {"type": "string", "default": ""}
+        },
+        "required": ["query"]
+    }
+),
+
     ]
 
 
@@ -158,8 +184,9 @@ out 5;
     elif name == "check_calendar":
         start = arguments["start_date"]
         end = arguments["end_date"]
+        data = _load_calendar()
         conflicts = [
-            b for b in CALENDAR_DATA["bookings"]
+            b for b in data["bookings"]
             if start <= b["date"] <= end
         ]
         if not conflicts:
@@ -175,7 +202,9 @@ out 5;
             "activity": arguments["activity"],
             "time": arguments.get("time", "10:00")
         }
-        CALENDAR_DATA["bookings"].append(entry)
+        data = _load_calendar()
+        data["bookings"].append(entry)
+        _save_calendar(data)
         return [TextContent(
             type="text",
             text=f"Added: {entry['date']} at {entry['time']} — {entry['activity']}"
@@ -189,7 +218,7 @@ out 5;
             return [TextContent(type="text", text="Error: Missing 'query' argument.")]
             
         try:
-            # Call your existing service logic
+            from app.services.rag_service import rag_service
             results = rag_service.search(query, destination=destination or None)
             
             # Convert results to a string so the LLM can read it

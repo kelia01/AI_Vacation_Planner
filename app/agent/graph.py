@@ -123,13 +123,6 @@ Rules:
 """
 
     messages = state.get("messages", [])
-    if not messages:
-        user_msg = state.get("user_feedback") or (
-            f"Plan my {trip['days']}-day trip to {trip['destination']} "
-            f"with a budget of ${trip['budget']}. Style: {trip['trip_style']}"
-        )
-        messages = [HumanMessage(content=user_msg)]
-
     # Count prior tool call rounds to enforce iteration limit
     tool_call_count = sum(
         1 for msg in messages
@@ -234,8 +227,16 @@ async def run_agent(
         "user_feedback": user_feedback or message,
         "error": None,
     }
+    
+    user_msg = user_feedback or message or (
+        f"Plan my {state_with_trip['trip']['days']}-day trip to "
+        f"{state_with_trip['trip']['destination']} "
+        f"with a budget of ${state_with_trip['trip']['budget']}. "
+        f"Style: {state_with_trip['trip']['trip_style']}"
+    )
 
-    # Trip retrieval runs before the graph (authorization + DB load)
+    initial_state["messages"] = [HumanMessage(content=user_msg)]
+    
     state_with_trip = retrieve_trip_node(initial_state, db)
     if state_with_trip.get("error"):
         return state_with_trip
