@@ -1,7 +1,9 @@
 import base64
 import json
+import time
 import uuid
 from typing import Optional
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
@@ -11,12 +13,16 @@ from app.dependencies import get_current_user
 from app.models import User
 from app.agent import run_agent, StructuredItinerary
 from app.services import trip_service, itinerary_service
+from app.services.guardrails import MAX_TEXT_CHARS, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, check_audio, check_image, check_text
 from app.services.multimodal_service import transcribe_audio, analyze_image, text_to_speech
 from app import schemas
 from app.agent.agent_schemas import ReviewRequest, ReviewResponse
 
 router = APIRouter(prefix="/agent", tags=["agent"])
+_logger = logging.getLogger("agent.router")
 
+def _guardrail_error(reason: str, field: str) -> HTTPException:
+    return HTTPException(status_code=400, detail={"field": field, "reason": reason})
 
 @router.post("/plan")
 async def plan_itinerary(
@@ -28,7 +34,7 @@ async def plan_itinerary(
     current_user: User = Depends(get_current_user),
 ):
     """Plan itinerary — accepts text, voice (WAV/MP3), or destination image."""
-
+    t0 = time.perf_counter()
     try:
         trip_service.get_trip_by_id(db, trip_id, current_user.id)
     except HTTPException:
@@ -36,11 +42,17 @@ async def plan_itinerary(
 
     parts = []
     if text:
+        result = check_text(text)
+        if not result.passed:
+            raise _guardrail_error(result.reason, "text")
         parts.append(f"Instructions: {text}")
     
     if audio:
         audio_bytes = await audio.read()
         if audio_bytes:
+            result = check_audio(audio_bytes)
+            if not result.passed:
+                raise _guardrail_error(result.reason, "audio")
             transcript = transcribe_audio(audio_bytes)
             parts.append(f"Voice request: {transcript}")
 
@@ -48,6 +60,9 @@ async def plan_itinerary(
         image_bytes = await image.read()
         content_type = image.content_type  # pass real content-type to avoid hardcoded jpeg
         if image_bytes:
+            result = check_image(image_bytes)
+            if not result.passed:
+                raise _guardrail_error(result.reason, "image")
             image_context = analyze_image(image_bytes, content_type=content_type)
             parts.append(f"Image context: {image_context}")
 
@@ -62,8 +77,18 @@ async def plan_itinerary(
         thread_id=thread_id,
         db=db,
     )
+    
+    latency_ms = (time.perf_counter() - t0) * 1000
 
     if agent_state.get("error"):
+        _logger.warning(json.dumps({
+            "event": "plan_request",
+            "trip_id": trip_id,
+            "user_id": current_user.id,
+            "status": "error",
+            "error": agent_state["error"],
+            "latency_ms": round(latency_ms, 1),
+        }))
         return {"status": "error", "thread_id": thread_id, "error": agent_state["error"]}
 
     itinerary = agent_state.get("itinerary_draft")
@@ -72,7 +97,15 @@ async def plan_itinerary(
     tts_audio = text_to_speech(f"Your itinerary for {itinerary.get('metadata', {}).get('destination', 'your trip')} is ready.")
     if tts_audio:
         audio_b64 = base64.b64encode(tts_audio).decode()
-
+        
+    _logger.info(json.dumps({
+        "event": "plan_request",
+        "trip_id": trip_id,
+        "user_id": current_user.id,
+        "status": "success",
+        "latency_ms": round(latency_ms, 1),
+        "tts_included": audio_b64 is not None,
+    }))
     return {
         "status": "success",
         "thread_id": thread_id,
@@ -88,6 +121,7 @@ async def review_itinerary(
     current_user: User = Depends(get_current_user),
 ):
     """Approve (save) or revise the draft itinerary."""
+    t0 = time.perf_counter()
 
     try:
         parts = request.thread_id.split("_")
@@ -99,7 +133,7 @@ async def review_itinerary(
         trip_service.get_trip_by_id(db, trip_id, current_user.id)
     except HTTPException:
         raise HTTPException(status_code=404, detail="Trip not found")
-
+    
     if request.action == "approve":
         try:
             structured = StructuredItinerary(**request.itinerary_data)
@@ -107,6 +141,12 @@ async def review_itinerary(
             legacy_format["trip_id"] = trip_id
             itinerary_create = schemas.ItineraryCreate(**legacy_format)
             db_itinerary = itinerary_service.create_itinerary(db, itinerary_create, current_user.id)
+            _logger.info(json.dumps({
+                "event": "review_request", "action": "approve",
+                "trip_id": trip_id, "user_id": current_user.id,
+                "saved_id": db_itinerary.id,
+                "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
+            }))
             return ReviewResponse(status="success", thread_id=request.thread_id, saved_id=db_itinerary.id)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=f"Invalid itinerary: {e}")
@@ -116,6 +156,13 @@ async def review_itinerary(
             raise HTTPException(status_code=500, detail=f"Failed to save: {e}")
 
     elif request.action == "revise":
+        if request.feedback:
+            result = check_text(request.feedback)
+            if not result.passed:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"field": "feedback", "reason": result.reason},
+                )
         try:
             agent_state = await run_agent(
                 trip_id=trip_id,
@@ -125,8 +172,20 @@ async def review_itinerary(
                 db=db,
                 user_feedback=request.feedback,
             )
+            latency_ms = round((time.perf_counter() - t0) * 1000, 1)
             if agent_state.get("error"):
+                _logger.warning(json.dumps({
+                    "event": "review_request", "action": "revise",
+                    "trip_id": trip_id, "user_id": current_user.id,
+                    "status": "error", "error": agent_state["error"],
+                    "latency_ms": latency_ms,
+                }))
                 return ReviewResponse(status="error", thread_id=request.thread_id, error=agent_state["error"])
+            _logger.info(json.dumps({
+                "event": "review_request", "action": "revise",
+                "trip_id": trip_id, "user_id": current_user.id,
+                "status": "success", "latency_ms": latency_ms,
+            }))
             return ReviewResponse(
                 status="success",
                 thread_id=request.thread_id,

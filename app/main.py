@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import engine, Base
 from app.routers import auth, users, trips, itineraries, agent
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 Base.metadata.create_all(bind=engine)
 

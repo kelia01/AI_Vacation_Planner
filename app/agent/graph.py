@@ -16,7 +16,8 @@ import aiosqlite
 from app.agent.state import AgentState
 from app.agent.itinerary_models import StructuredItinerary
 from app.agent.mcp_tools import MCP_TOOLS
-from app.services import trip_service
+from app.services import trip_service, evaluator
+from app.services.observability import AgentTimer, count_tool_calls, extract_token_usage, log_record, AgentCallRecord
 from app.services.rag_service import rag_service
 
 
@@ -231,6 +232,10 @@ async def run_agent(
     
     state_with_trip = retrieve_trip_node(initial_state, db)
     if state_with_trip.get("error"):
+        log_record(AgentCallRecord(
+            trip_id=trip_id, user_id=user_id, thread_id=thread_id,
+            success=False, error=state_with_trip["error"],
+        ))
         return state_with_trip
     
     if not (user_feedback or message):
@@ -245,4 +250,20 @@ async def run_agent(
     graph = build_agent_graph(checkpointer)
     
     config = {"configurable": {"thread_id": thread_id}}
-    return await graph.ainvoke(state_with_trip, config=config)
+    
+    record = AgentCallRecord(trip_id=trip_id, user_id=user_id, thread_id=thread_id)
+
+    with AgentTimer() as timer:
+        final_state = await graph.ainvoke(state_with_trip, config=config)
+
+    record.latency_ms = timer.latency_ms
+    record.input_tokens, record.output_tokens = extract_token_usage(final_state)
+    record.tool_calls_made = count_tool_calls(final_state)
+    record.approval_state = final_state.get("approval_state")
+
+    if final_state.get("error"):
+        record.success = False
+        record.error = final_state["error"]
+
+    log_record(record)
+    return final_state
