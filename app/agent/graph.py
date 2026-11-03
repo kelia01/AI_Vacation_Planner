@@ -20,6 +20,8 @@ from app.services import trip_service, evaluator
 from app.services.observability import AgentTimer, count_tool_calls, extract_token_usage, log_record, AgentCallRecord
 from app.services.rag_service import rag_service
 
+from app.services.evaluator import evaluate_itinerary
+
 
 MAX_ITERATIONS = 5
 
@@ -174,15 +176,14 @@ def validate_itinerary_node(state: AgentState) -> Command:
 
     try:
         itinerary = StructuredItinerary(**state["itinerary_draft"])
-        trip_days = state["trip"]["days"]
-        if len(itinerary.days) != trip_days:
-            return Command(
-                goto=END,
-                update={"error": f"Itinerary has {len(itinerary.days)} days, trip requires {trip_days}"}
-            )
-        total = itinerary.metadata.total_estimated_cost or 0
-        if total > state["trip"]["budget"] * 1.1:
-            print(f"Warning: cost ${total:.2f} exceeds budget ${state['trip']['budget']}")
+        result = evaluate_itinerary(itinerary.model_dump(), state["trip"])
+        
+        if not result.passed:
+            return Command(goto=END, update={
+                "error": f"Evaluation failed:{result.failure_summary}",
+                "approval_state": "evaluation_failed",
+            })
+        
         return Command(goto=END, update={"approval_state": "draft_ready"})
     except Exception as e:
         return Command(goto=END, update={"error": f"Validation failed: {e}"})

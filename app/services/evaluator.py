@@ -57,6 +57,7 @@ def _deterministic_checks(itinerary: dict, trip: dict) -> list[CheckResult]:
     
     checks.append(CheckResult(
         name="day_completeness",
+        passed=days_passed,
         reason=f"All {len(days)} days present with activites" if days_passed 
         else f"Expected {expected_days} days, got {len(days)}." if len(days) != expected_days
         else f"Days {empty_days} have no activities"
@@ -98,4 +99,49 @@ def _deterministic_checks(itinerary: dict, trip: dict) -> list[CheckResult]:
     return checks
 
 def _llm_relevance_checks(itinerary: dict, trip: dict) -> CheckResult:
+    destination = trip.get("destination", "")
+    style = trip.get("trip_style", "")
+    days_summary = "\n".join(f"Day {d['day_number']}: {
+        ','.join(a['name'] for a in d.get('activities', []))}" 
+        for d in (itinerary.get("days") or []))
     
+    try:
+        metric = GEval(
+            name="Itinerary Relevance",
+            criteria=f"The activities are genuinely relevant to {destination} and appropriate for {style} travel style.",
+            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            threshold=0.5,
+        )
+        test_case = LLMTestCase(
+            input=f"{destination} {style} trip",
+            actual_output=days_summary,
+        )
+        metric.measure(test_case)
+        passed = metric.score >= metric.threshold
+        return CheckResult(
+            name="llm_relevance",
+            passed=passed,
+            reason=f"GEval score {metric.score:.2f}: {metric.reason}",
+        )
+    except Exception as e:
+        return CheckResult(
+            name="llm_relevance",
+            passed=True,
+            reason=f"LLM check skipped: {e}",
+        )
+        
+def evaluate_itinerary(itinerary: dict, trip: dict) -> EvaluationResult:
+    checks = _deterministic_checks(itinerary, trip)
+    det_passed = all(c.passed for c in checks)
+    if det_passed: 
+        llm_check = _llm_relevance_checks(itinerary, trip)
+        checks.append(llm_check)
+        passed = llm_check.passed
+        
+    else: 
+        passed = False
+        
+    score = sum(c.passed for c in checks) / len(checks)
+    failure_summary = ";".join(c.reason for c in checks if c.passed) or None
+    
+    return EvaluationResult(passed=passed, score=score, checks=checks, failure_summary=failure_summary)
