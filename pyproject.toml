@@ -20,7 +20,7 @@ dependencies = [
     "click==8.3.3",
     "colorama==0.4.6",
     "cryptography==48.0.0",
-    "deepeval>=2.5.5",
+    "deepeval>=2.7.0",
     "distro==1.9.0",
     "dnspython==2.8.0",
     "docstring-parser==0.18.0",
@@ -52,7 +52,7 @@ dependencies = [
     "pydantic==2.13.4",
     "pydantic-core==2.46.4",
     "pydub>=0.25.1",
-    "python-dotenv==1.0.0",
+    "python-dotenv>=1.1.1",
     "python-jose==3.3.0",
     "python-multipart>=0.0.9",
     "pyyaml==6.0.3",
@@ -84,3 +84,6 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -4,13 +4,38 @@ Itinerary evaluator: deterministic checks first, LLM relevance check only if all
 
 from dataclasses import dataclass, field
 from typing import Optional
-from langchain.chat_models import init_chat_model
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import HumanMessage
 
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
+from deepeval.models.base_model import DeepEvalBaseLLM
 
-_llm = init_chat_model("claude-haiku-4-5", model_provider="anthropic")
+class AnthropicJudge(DeepEvalBaseLLM):
+    def __init__(self):
+        self.model = ChatAnthropic(model="claude-haiku-4-5", max_tokens=1024)
+        
+    def load_model(self):
+        return self.model
+    
+    def generate(self, prompt: str) -> str :
+        return self.model.invoke([HumanMessage(content=prompt)]).content
+    
+    async def a_generate(self, prompt: str) -> str:
+        response = await self.model.ainvoke([HumanMessage(content=prompt)])
+        return response.content
+    
+    def get_model_name(self) -> str:
+        return "claude-haiku-4-5"
+    
 
+_judge: Optional[AnthropicJudge] = None
+
+def _get_judge() -> AnthropicJudge:
+    global _judge
+    if _judge is None:
+        _judge = AnthropicJudge()
+    return _judge
 
 @dataclass
 class CheckResult:
@@ -109,8 +134,9 @@ def _llm_relevance_checks(itinerary: dict, trip: dict) -> CheckResult:
         metric = GEval(
             name="Itinerary Relevance",
             criteria=f"The activities are genuinely relevant to {destination} and appropriate for {style} travel style.",
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.5,
+            model=_get_judge(),
         )
         test_case = LLMTestCase(
             input=f"{destination} {style} trip",
@@ -142,6 +168,6 @@ def evaluate_itinerary(itinerary: dict, trip: dict) -> EvaluationResult:
         passed = False
         
     score = sum(c.passed for c in checks) / len(checks)
-    failure_summary = ";".join(c.reason for c in checks if c.passed) or None
+    failure_summary = ";".join(c.reason for c in checks if not c.passed) or None
     
     return EvaluationResult(passed=passed, score=score, checks=checks, failure_summary=failure_summary)
