@@ -1,69 +1,103 @@
 """
-Structured observability for agent calls.
-Logs latency, token usage, model, errors, and request context as JSON.
+Observability via LangChain BaseCallbackHandler.
+Hooks into every LLM call and tool invocation automatically.
 """
 
 import json
 import logging
 import time
-from dataclasses import dataclass, field, asdict
-from typing import Optional
+from typing import Any, Optional
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.outputs import LLMResult
+from app.services.datadog_service import record_llm_call
 
 _logger = logging.getLogger("agent.observability")
-
 if not _logger.handlers:
-    _handler = logging.StreamHandler()
-    _handler.setFormatter(logging.Formatter("%(message)s"))
-    _logger.addHandler(_handler)
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(message)s"))
+    _logger.addHandler(_h)
     _logger.setLevel(logging.INFO)
     _logger.propagate = False
-    
-@dataclass
-class AgentCallRecord:
-    trip_id: int
-    user_id: int
-    thread_id: str
-    model: str = "claude-haiku-4-5"
-    latency_ms: Optional[float] = None
-    input_tokens: Optional[int] = None
-    output_tokens: Optional[int] = None 
-    tool_calls_made: int = 0
-    success: bool = True
-    error: Optional[str] = None
-    approval_state: Optional[str] = None
-    extra: dict = field(default_factory=dict)
-    
-def log_record(record: AgentCallRecord) -> None:
-    _logger.info(json.dumps({"event": "agent_call", **asdict(record)}))
-    
-class AgentTimer:
-    def __init__(self):
-        self.latency_ms: Optional[float] = None
-        
-    def __enter__(self):
-        self.start = time.perf_counter()
-        return self
-    
-    def __exit__(self, *_):
-        self.latency_ms = (time.perf_counter() - self.start) * 1000
-        
-        
-def extract_token_usage(state: dict) -> tuple[Optional[int], Optional[int]]:
-    """
-    Pull token counts from the last AIMessage in state["messages"].
-    LangChain stores usage in message.usage_metadata as
-    {"input_tokens": N, "output_tokens": N}.
-    Returns (input_tokens, output_tokens) or (None, None) if unavailable.
-    """
-    messages = state.get("messages", [])
-    for msg in reversed(messages):
-        usage = getattr(msg, "usage_metadata", None)
-        if usage:
-            return usage.get("input_tokens"), usage.get("output_tokens")
-        return None, None
-    
-def count_tool_calls(state: dict) -> int:
-        return sum(
-            1 for msg in state.get("messages", [])
-            if getattr(msg, "tool_calls", None)
+
+
+class AgentObservabilityHandler(BaseCallbackHandler):
+    """Spy on every LLM call and tool invocation inside the LangGraph agent."""
+
+    def __init__(self, trip_id: int, user_id: int, thread_id: str):
+        self.trip_id = trip_id
+        self.user_id = user_id
+        self.thread_id = thread_id
+        self._llm_start: float = 0
+        self._model_name: str = "unknown"
+        self._tool_starts: dict[str, float] = {}  # run_id -> start time
+
+    # ── LLM hooks ────────────────────────────────────────────────────────────
+
+    def on_llm_start(self, serialized: dict, prompts: list, **kwargs):
+        self._llm_start = time.perf_counter()
+        self._model_name = (
+            serialized.get("name")
+            or (serialized.get("id") or ["unknown"])[-1]
         )
+
+    def on_llm_end(self, response: LLMResult, **kwargs):
+        latency_ms = round((time.perf_counter() - self._llm_start) * 1000, 2)
+        usage = {}
+        if response.llm_output:
+            usage = response.llm_output.get("usage", {})
+        _logger.info(json.dumps({
+            "event": "llm_call",
+            "trip_id": self.trip_id,
+            "user_id": self.user_id,
+            "thread_id": self.thread_id,
+            "model": self._model_name,
+            "latency_ms": latency_ms,
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+        }))
+        record_llm_call(
+            latency_ms=latency_ms,
+            input_tokens=usage.get("input_tokens"),
+            output_tokens=usage.get("output_tokens"),
+            model=self._model_name,
+            trip_id=self.trip_id,
+        )
+
+    def on_llm_error(self, error: BaseException, **kwargs):
+        _logger.error(json.dumps({
+            "event": "llm_error",
+            "trip_id": self.trip_id,
+            "user_id": self.user_id,
+            "thread_id": self.thread_id,
+            "error": str(error),
+        }))
+
+    # ── Tool hooks ────────────────────────────────────────────────────────────
+
+    def on_tool_start(self, serialized: dict, input_str: str, run_id: Any = None, **kwargs):
+        self._tool_starts[str(run_id)] = time.perf_counter()
+        _logger.info(json.dumps({
+            "event": "tool_start",
+            "tool": serialized.get("name"),
+            "trip_id": self.trip_id,
+            "thread_id": self.thread_id,
+        }))
+
+    def on_tool_end(self, output: str, run_id: Any = None, **kwargs):
+        start = self._tool_starts.pop(str(run_id), None)
+        latency_ms = round((time.perf_counter() - start) * 1000, 2) if start else None
+        _logger.info(json.dumps({
+            "event": "tool_end",
+            "trip_id": self.trip_id,
+            "thread_id": self.thread_id,
+            "latency_ms": latency_ms,
+        }))
+
+    def on_tool_error(self, error: BaseException, run_id: Any = None, **kwargs):
+        self._tool_starts.pop(str(run_id), None)
+        _logger.error(json.dumps({
+            "event": "tool_error",
+            "trip_id": self.trip_id,
+            "thread_id": self.thread_id,
+            "error": str(error),
+        }))

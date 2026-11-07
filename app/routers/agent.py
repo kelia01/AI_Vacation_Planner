@@ -34,7 +34,6 @@ async def plan_itinerary(
     current_user: User = Depends(get_current_user),
 ):
     """Plan itinerary — accepts text, voice (WAV/MP3), or destination image."""
-    t0 = time.perf_counter()
     try:
         trip_service.get_trip_by_id(db, trip_id, current_user.id)
     except HTTPException:
@@ -77,8 +76,6 @@ async def plan_itinerary(
         thread_id=thread_id,
         db=db,
     )
-    
-    latency_ms = (time.perf_counter() - t0) * 1000
 
     if agent_state.get("error"):
         _logger.warning(json.dumps({
@@ -87,9 +84,9 @@ async def plan_itinerary(
             "user_id": current_user.id,
             "status": "error",
             "error": agent_state["error"],
-            "latency_ms": round(latency_ms, 1),
         }))
-        return {"status": "error", "thread_id": thread_id, "error": agent_state["error"]}
+        return {"status": "error", "thread_id": thread_id, "error": "Could not generate a valid itinerary. Please try again."}
+
 
     itinerary = agent_state.get("itinerary_draft")
 
@@ -103,7 +100,6 @@ async def plan_itinerary(
         "trip_id": trip_id,
         "user_id": current_user.id,
         "status": "success",
-        "latency_ms": round(latency_ms, 1),
         "tts_included": audio_b64 is not None,
     }))
     return {
@@ -121,7 +117,6 @@ async def review_itinerary(
     current_user: User = Depends(get_current_user),
 ):
     """Approve (save) or revise the draft itinerary."""
-    t0 = time.perf_counter()
 
     try:
         parts = request.thread_id.split("_")
@@ -145,7 +140,6 @@ async def review_itinerary(
                 "event": "review_request", "action": "approve",
                 "trip_id": trip_id, "user_id": current_user.id,
                 "saved_id": db_itinerary.id,
-                "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
             }))
             return ReviewResponse(status="success", thread_id=request.thread_id, saved_id=db_itinerary.id)
         except ValueError as e:
@@ -172,19 +166,17 @@ async def review_itinerary(
                 db=db,
                 user_feedback=request.feedback,
             )
-            latency_ms = round((time.perf_counter() - t0) * 1000, 1)
             if agent_state.get("error"):
                 _logger.warning(json.dumps({
                     "event": "review_request", "action": "revise",
                     "trip_id": trip_id, "user_id": current_user.id,
                     "status": "error", "error": agent_state["error"],
-                    "latency_ms": latency_ms,
                 }))
                 return ReviewResponse(status="error", thread_id=request.thread_id, error=agent_state["error"])
             _logger.info(json.dumps({
                 "event": "review_request", "action": "revise",
                 "trip_id": trip_id, "user_id": current_user.id,
-                "status": "success", "latency_ms": latency_ms,
+                "status": "success", 
             }))
             return ReviewResponse(
                 status="success",

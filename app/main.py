@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import engine, Base
 from app.routers import auth, users, trips, itineraries, agent
+from app.services.datadog_service import init_datadog
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 Base.metadata.create_all(bind=engine)
+init_datadog()
 
 app = FastAPI(
     title="AI Vacation Planner",

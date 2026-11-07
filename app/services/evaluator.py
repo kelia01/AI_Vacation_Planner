@@ -4,38 +4,13 @@ Itinerary evaluator: deterministic checks first, LLM relevance check only if all
 
 from dataclasses import dataclass, field
 from typing import Optional
-from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage
 
 from deepeval.metrics import GEval
+from deepeval.models import AnthropicModel
 from deepeval.test_case import LLMTestCase, SingleTurnParams
-from deepeval.models.base_model import DeepEvalBaseLLM
 
-class AnthropicJudge(DeepEvalBaseLLM):
-    def __init__(self):
-        self.model = ChatAnthropic(model="claude-haiku-4-5", max_tokens=1024)
-        
-    def load_model(self):
-        return self.model
-    
-    def generate(self, prompt: str) -> str :
-        return self.model.invoke([HumanMessage(content=prompt)]).content
-    
-    async def a_generate(self, prompt: str) -> str:
-        response = await self.model.ainvoke([HumanMessage(content=prompt)])
-        return response.content
-    
-    def get_model_name(self) -> str:
-        return "claude-haiku-4-5"
-    
 
-_judge: Optional[AnthropicJudge] = None
-
-def _get_judge() -> AnthropicJudge:
-    global _judge
-    if _judge is None:
-        _judge = AnthropicJudge()
-    return _judge
+model = AnthropicModel(model="claude-haiku-4-5")
 
 @dataclass
 class CheckResult:
@@ -136,7 +111,7 @@ def _llm_relevance_checks(itinerary: dict, trip: dict) -> CheckResult:
             criteria=f"The activities are genuinely relevant to {destination} and appropriate for {style} travel style.",
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.5,
-            model=_get_judge(),
+            model=model,
         )
         test_case = LLMTestCase(
             input=f"{destination} {style} trip",

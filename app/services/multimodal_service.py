@@ -28,6 +28,10 @@ def transcribe_audio(audio_bytes: bytes) -> str:
     import io
     import speech_recognition as sr
     from pydub import AudioSegment
+    import imageio_ffmpeg
+
+    AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
+    AudioSegment.ffprobe   = imageio_ffmpeg.get_ffmpeg_exe()
 
     # Decode any format → PCM WAV in memory
     audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes))
