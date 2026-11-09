@@ -16,7 +16,7 @@ from app.services import trip_service, itinerary_service
 from app.services.guardrails import MAX_TEXT_CHARS, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, check_audio, check_image, check_text
 from app.services.multimodal_service import transcribe_audio, analyze_image, text_to_speech
 from app import schemas
-from app.agent.agent_schemas import ReviewRequest, ReviewResponse
+from app.agent.agent_schemas import ReviewRequest, ReviewResponse, PlanningResponse
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 _logger = logging.getLogger("agent.router")
@@ -24,7 +24,7 @@ _logger = logging.getLogger("agent.router")
 def _guardrail_error(reason: str, field: str) -> HTTPException:
     return HTTPException(status_code=400, detail={"field": field, "reason": reason})
 
-@router.post("/plan")
+@router.post("/plan", response_model=PlanningResponse)
 async def plan_itinerary(
     trip_id: int = Form(...),
     text: Optional[str] = Form(None),
@@ -52,8 +52,12 @@ async def plan_itinerary(
             result = check_audio(audio_bytes)
             if not result.passed:
                 raise _guardrail_error(result.reason, "audio")
-            transcript = transcribe_audio(audio_bytes)
-            parts.append(f"Voice request: {transcript}")
+            try:
+                transcript = transcribe_audio(audio_bytes, content_type=audio.content_type or "audio/mpeg")
+                parts.append(f"Voice request: {transcript}")
+            except Exception as e:
+                _logger.warning("Audio transcription failed: %s", e)
+                raise HTTPException(status_code=422, detail=f"Could not transcribe audio: {e}")
 
     if image:
         image_bytes = await image.read()

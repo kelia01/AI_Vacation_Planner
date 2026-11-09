@@ -1,8 +1,11 @@
 import base64
-import os
+from gtts import gTTS
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
-from elevenlabs.client import ElevenLabs
+import io
+import speech_recognition as sr
+from pydub import AudioSegment
+import imageio_ffmpeg
 
 llm = ChatAnthropic(model="claude-haiku-4-5")
 
@@ -21,19 +24,22 @@ def _detect_media_type(data: bytes) -> str:
     return "image/jpeg"
 
 
-def transcribe_audio(audio_bytes: bytes) -> str:
+def transcribe_audio(audio_bytes: bytes, content_type: str = "audio/mpeg") -> str:
     """Convert audio bytes to text using SpeechRecognition (free Google web API).
     Accepts any format (MP3, M4A, OGG, WAV) — converts to PCM WAV via pydub.
     """
-    import io
-    import speech_recognition as sr
-    from pydub import AudioSegment
-    import imageio_ffmpeg
 
     AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
     AudioSegment.ffprobe   = imageio_ffmpeg.get_ffmpeg_exe()
-
-    # Decode any format → PCM WAV in memory
+    
+    fmt_map = {
+        "audio/mpeg": "mp3", "audio/mp3": "mp3",
+        "audio/wav": "wav", "audio/x-wav": "wav",
+        "audio/ogg": "ogg", "audio/m4a": "mp4",
+        "audio/mp4": "mp4", "audio/aac": "aac",
+    }
+    fmt = fmt_map.get(content_type, "mp3")
+    
     audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes))
     wav_buffer = io.BytesIO()
     audio_segment.export(wav_buffer, format="wav")
@@ -42,7 +48,10 @@ def transcribe_audio(audio_bytes: bytes) -> str:
     recognizer = sr.Recognizer()
     with sr.AudioFile(wav_buffer) as source:
         audio = recognizer.record(source)
-    return recognizer.recognize_google(audio)
+    try:
+        return recognizer.recognize_google(audio)
+    except Exception:
+        return recognizer.recognize_whisper(audio, model="base")
 
 
 def analyze_image(image_bytes: bytes, content_type: str = None) -> str:
@@ -73,17 +82,10 @@ def analyze_image(image_bytes: bytes, content_type: str = None) -> str:
 
 
 def text_to_speech(text: str) -> bytes | None:
-    """Convert text to audio using ElevenLabs. Returns bytes or None on failure."""
-    api_key = os.getenv("ELEVENLABS_API_KEY")
-    if not api_key:
-        return None
+    """Convert text to audio using gTTS. Returns MP3 bytes or None on failure."""
     try:
-        client = ElevenLabs(api_key=api_key)
-        audio_bytes = client.text_to_speech.convert(
-            voice_id="21m00Tcm4TlvDq8ikWAM",
-            text=text,
-            model_id="eleven_monolingual_v1",
-        )
-        return b"".join(audio_bytes)
+        buf = io.BytesIO()
+        gTTS(text=text, lang="en").write_to_fp(buf)
+        return buf.getvalue()
     except Exception:
         return None

@@ -72,6 +72,9 @@ dependencies = [
     "uvicorn==0.46.0",
     "watchfiles==1.1.1",
     "websockets==16.0",
+    "openai-whisper>=20250625",
+    "soundfile>=0.14.0",
+    "gtts>=2.2.4",
 ]
 
 [project.scripts]

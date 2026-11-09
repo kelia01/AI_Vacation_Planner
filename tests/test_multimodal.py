@@ -16,18 +16,17 @@ class TestMultimodalService:
         from app.services.multimodal_service import _detect_media_type
         assert _detect_media_type(b"\x00\x00\x00\x00") == "image/jpeg"
 
-    def test_tts_returns_none_without_key(self):
+    def test_tts_returns_bytes(self):
         from app.services.multimodal_service import text_to_speech
-        with patch.dict("os.environ", {}, clear=True):
+        with patch("app.services.multimodal_service.gTTS") as mock_gtts:
+            mock_gtts.return_value.write_to_fp = lambda buf: buf.write(b"fake-mp3")
             result = text_to_speech("hello")
-        assert result is None
+        assert isinstance(result, bytes) and len(result) > 0
 
-    def test_tts_returns_none_on_api_error(self):
+    def test_tts_returns_none_on_error(self):
         from app.services.multimodal_service import text_to_speech
-        with patch.dict("os.environ", {"ELEVENLABS_API_KEY": "fake-key"}):
-            with patch("app.services.multimodal_service.ElevenLabs") as mock_el:
-                mock_el.return_value.text_to_speech.convert.side_effect = Exception("API error")
-                result = text_to_speech("hello")
+        with patch("app.services.multimodal_service.gTTS", side_effect=Exception("network error")):
+            result = text_to_speech("hello")
         assert result is None
 
     def test_analyze_image_calls_claude(self):
