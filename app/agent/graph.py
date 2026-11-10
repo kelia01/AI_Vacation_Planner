@@ -3,6 +3,7 @@ LangGraph workflow for the vacation planning agent.
 """
 
 import json
+import os
 from pathlib import Path
 
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
@@ -23,6 +24,10 @@ from app.services.observability import AgentObservabilityHandler
 
 from app.services.evaluator import evaluate_itinerary
 import logging
+
+_llmobs_enabled = bool(os.getenv("DD_API_KEY"))
+if _llmobs_enabled:
+    from ddtrace.llmobs import LLMObs
 
 _logger = logging.getLogger("agent.graph")
 
@@ -63,7 +68,7 @@ def retrieve_trip_node(state: AgentState, db) -> AgentState:
         return {**state, "error": f"Database error: {str(e)}"}
 
 
-def agent_node(state: AgentState) -> Command:
+def _agent_node_inner(state: AgentState) -> Command:
     if state.get("error"):
         return Command(goto=END, update={"approval_state": "error"})
 
@@ -149,9 +154,19 @@ Do not stop after tool calls - always produce the final JSON output.
     has_tool_results = any(isinstance(m, ToolMessage) for m in messages)
 
     if has_tool_results:
-        response = llm.invoke([SystemMessage(content=system_prompt)] + messages)
+        if _llmobs_enabled:
+            with LLMObs.llm(model_name="claude-haiku-4-5", model_provider="anthropic", name="plan_itinerary_llm"):
+                response = llm.invoke([SystemMessage(content=system_prompt)] + messages)
+                LLMObs.annotate(span=None, input_data=[{"role": "system", "content": system_prompt}], output_data=response.content if isinstance(response.content, str) else str(response.content))
+        else:
+            response = llm.invoke([SystemMessage(content=system_prompt)] + messages)
     else:
-        response = llm.bind_tools(MCP_TOOLS).invoke([SystemMessage(content=system_prompt)] + messages)
+        if _llmobs_enabled:
+            with LLMObs.llm(model_name="claude-haiku-4-5", model_provider="anthropic", name="plan_itinerary_llm"):
+                response = llm.bind_tools(MCP_TOOLS).invoke([SystemMessage(content=system_prompt)] + messages)
+                LLMObs.annotate(span=None, input_data=[{"role": "system", "content": system_prompt}], output_data=response.content if isinstance(response.content, str) else str(response.content))
+        else:
+            response = llm.bind_tools(MCP_TOOLS).invoke([SystemMessage(content=system_prompt)] + messages)
 
     if response.tool_calls:
         return Command(goto="tools", update={"messages": [response]})
@@ -208,6 +223,16 @@ Do not stop after tool calls - always produce the final JSON output.
         return Command(goto=END, update={"messages": [response], "error": f"JSON parse error: {e}"})
     except Exception as e:
         return Command(goto=END, update={"messages": [response], "error": f"Itinerary validation failed: {e}"})
+
+
+def agent_node(state: AgentState) -> Command:
+    if _llmobs_enabled:
+        with LLMObs.agent(name="vacation_planner_agent"):
+            LLMObs.annotate(span=None, input_data=str(state.get("user_feedback") or ""))
+            result = _agent_node_inner(state)
+            LLMObs.annotate(span=None, output_data=str(result))
+            return result
+    return _agent_node_inner(state)
 
 
 MAX_VALIDATION_RETRIES = 2

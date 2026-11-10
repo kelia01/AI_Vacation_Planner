@@ -97,7 +97,7 @@ async def plan_itinerary(
     audio_b64 = None
     tts_audio = text_to_speech(f"Your itinerary for {itinerary.get('metadata', {}).get('destination', 'your trip')} is ready.")
     if tts_audio:
-        audio_b64 = base64.b64encode(tts_audio).decode()
+        audio_b64 = "data:audio/mpeg;base64," + base64.b64encode(tts_audio).decode()
         
     _logger.info(json.dumps({
         "event": "plan_request",
