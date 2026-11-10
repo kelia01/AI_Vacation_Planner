@@ -13,6 +13,7 @@ class PlanningResponse(BaseModel):
     status: str = Field(..., description="'success' or 'error'")
     thread_id: str = Field(..., description="Conversation thread ID")
     itinerary: Optional[dict] = Field(None, description="Draft itinerary")
+    audio_base64: Optional[str] = Field(None, description="Base64-encoded MP3 spoken summary (ElevenLabs TTS)")
     error: Optional[str] = Field(None, description="Error message if any")
 
 class ReviewRequest(BaseModel):

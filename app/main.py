@@ -3,8 +3,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import engine, Base
 from app.routers import auth, users, trips, itineraries, agent
+from app.services.datadog_service import init_datadog
+import logging
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 Base.metadata.create_all(bind=engine)
+init_datadog()
+
+if os.getenv("DD_API_KEY"):
+    from ddtrace.llmobs import LLMObs
+    LLMObs.enable(
+        ml_app=os.getenv("DD_LLMOBS_ML_APP", "ai-vacation-planner"),
+        api_key=os.getenv("DD_API_KEY"),
+        site=os.getenv("DD_SITE", "datadoghq.com"),
+        agentless_enabled=os.getenv("DD_LLMOBS_AGENTLESS_ENABLED", "true").lower() == "true",
+    )
 
 app = FastAPI(
     title="AI Vacation Planner",

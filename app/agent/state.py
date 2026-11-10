@@ -13,3 +13,4 @@ class AgentState(TypedDict):
     approval_state: str
     user_feedback: Optional[str]
     error: Optional[str]
+    validation_retries: int

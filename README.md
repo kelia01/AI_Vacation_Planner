@@ -1,8 +1,8 @@
 # AI Vacation Planner
 
-An intelligent trip planning API that evolved across 6 phases — from a basic REST API to a full multimodal AI agent with voice input, image understanding, MCP-connected tools, and text-to-speech output.
+An intelligent trip planning API that evolved across 7 phases — from a basic REST API to a full multimodal AI agent with voice input, image understanding, MCP-connected tools, text-to-speech output, and production-grade evaluation, security, and observability.
 
-Built with **FastAPI**, **LangGraph**, and **MCP**.
+Built with **FastAPI**, **LangGraph**, **MCP**, and **DeepEval**.
 
 ---
 
@@ -346,6 +346,157 @@ User Request → AI Agent → Tool selection → Tool execution → LLM → Fina
 
 ```bash
 uv run pytest tests/ -v
+```
+
+To run only DeepEval evaluation tests (requires `ANTHROPIC_API_KEY`):
+
+```bash
+uv run deepeval test run tests/test_deepeval.py
+# or via pytest
+uv run pytest tests/test_deepeval.py -v
+```
+
+---
+
+---
+
+# ⭐ Phase 7 — Evaluation, Security & Testing
+
+> This section covers Phase 7 requirements.
+
+---
+
+## 7.1 AI Response Evaluation
+
+Every generated itinerary passes through a two-layer evaluation pipeline before being returned to the user.
+
+### Deterministic Checks (`app/services/evaluator.py`)
+
+| Check | What it verifies |
+|-------|------------------|
+| `destination_match` | Itinerary destination matches the trip destination (substring match, case-insensitive) |
+| `day_completeness` | Number of days equals `trip.days`; no day has zero activities |
+| `budget_adherence` | Total estimated cost ≤ `trip.budget × 1.1` (10% tolerance) |
+| `format_validity` | Required fields present: `metadata.destination`, `metadata.duration_days`, `day_number`, activity `name` |
+
+### LLM-Based Relevance Check (DeepEval GEval)
+
+- Only runs if all deterministic checks pass
+- Uses `GEval` with `claude-haiku-4-5` via `AnthropicModel`
+- Criteria: activities are genuinely relevant to the destination and appropriate for the travel style
+- Threshold: `0.5` — scores below this trigger a re-plan
+- File: `app/services/evaluator.py` → `_llm_relevance_checks()`
+
+### Evaluation in the Agent Graph
+
+- `validate_itinerary_node` in `app/agent/graph.py` runs after every itinerary draft
+- If evaluation fails, the agent is re-invoked with the failure summary as feedback (max **2 retries**)
+- After 2 retries the best available draft is returned with a warning note
+- This prevents infinite loops while still attempting self-correction
+
+---
+
+## 7.2 Safety & Guardrails
+
+All user inputs are validated before reaching the LLM (`app/services/guardrails.py`).
+
+| Guardrail | Trigger | HTTP response |
+|-----------|---------|---------------|
+| Text length | Input > 2,000 characters | `400` |
+| Prompt injection | Patterns: `ignore previous instructions`, `jailbreak`, `act as`, `system:`, etc. | `400` |
+| Off-topic input | Text ≥ 200 chars with no travel keywords | `400` |
+| Audio size | Upload > 10 MB | `400` |
+| Image size | Upload > 5 MB | `400` |
+
+Guardrails are applied at:
+- `/agent/plan` — `text`, `audio` (post-transcription), `image` fields
+- `/agent/review` — `feedback` field on revise action
+
+---
+
+## 7.3 Testing Strategy
+
+```
+tests/
+├── conftest.py               # Shared fixtures, test DB, helpers, mock agent state
+├── test_auth.py              # Register, login, JWT, protected routes
+├── test_trips.py             # CRUD, user isolation, validation
+├── test_itineraries.py       # Itinerary retrieval, auth checks
+├── test_agent.py             # /agent/plan and /agent/review flows (mocked agent)
+├── test_guardrails.py        # All guardrail cases (unit + integration)
+├── test_evaluator.py         # Deterministic evaluation checks (no LLM)
+├── test_deepeval.py          # DeepEval GEval tests against golden dataset
+├── test_models.py            # StructuredItinerary Pydantic validation
+├── test_mcp.py               # MCP client unit tests
+├── test_multimodal.py        # TTS, image detection, audio transcription
+└── golden_dataset.json       # 9 test cases across 7 destinations
+```
+
+### Golden Dataset (`tests/golden_dataset.json`)
+
+9 cases across 7 destinations (Tokyo, Barcelona, Cape Town, New York, Bali, Kyoto, Rome, Amsterdam, Paris):
+- 5 passing cases — diverse destinations and travel styles (cultural, adventure, luxury, budget, wellness)
+- 4 failing cases — one per failure type: wrong destination, budget exceeded, missing days, irrelevant activities
+
+### Running Tests
+
+```bash
+# All unit + integration tests (no LLM calls)
+uv run pytest tests/ -v --ignore=tests/test_deepeval.py
+
+# DeepEval evaluation tests (requires ANTHROPIC_API_KEY)
+uv run deepeval test run tests/test_deepeval.py
+```
+
+---
+
+## 7.4 Observability
+
+### Structured Logging
+
+Every LLM call, tool invocation, and agent request emits a structured JSON log line:
+
+```json
+{"event": "llm_call", "trip_id": 1, "user_id": 1, "thread_id": "...", "model": "claude-haiku-4-5", "latency_ms": 1240.5, "input_tokens": 850, "output_tokens": 420}
+{"event": "tool_start", "tool": "get_weather_mcp", "trip_id": 1, "thread_id": "..."}
+{"event": "tool_end", "trip_id": 1, "thread_id": "...", "latency_ms": 320.1}
+{"event": "plan_request", "trip_id": 1, "user_id": 1, "status": "success", "tts_included": false}
+```
+
+File: `app/services/observability.py` → `AgentObservabilityHandler`
+
+### Datadog APM + Metrics
+
+File: `app/services/datadog_service.py`
+
+- `ddtrace.patch_all()` auto-instruments FastAPI, SQLAlchemy, and HTTP clients
+- Custom DogStatsD metrics:
+
+| Metric | Type | Tags |
+|--------|------|------|
+| `vacation_planner.llm.latency_ms` | Gauge | `model`, `trip_id` |
+| `vacation_planner.llm.input_tokens` | Gauge | `model`, `trip_id` |
+| `vacation_planner.llm.output_tokens` | Gauge | `model`, `trip_id` |
+| `vacation_planner.agent.requests` | Gauge | `status`, `trip_id` |
+| `vacation_planner.evaluation.score` | Gauge | `passed`, `trip_id` |
+
+### Enabling Datadog
+
+Add to your `.env`:
+
+```env
+DD_API_KEY=your-datadog-api-key
+DD_SERVICE=ai-vacation-planner
+DD_ENV=production
+DD_VERSION=7.0.0
+DD_SITE=datadoghq.com
+```
+
+Install the Datadog Agent locally, then start the app normally — `init_datadog()` is called automatically on startup.
+
+```bash
+uv add ddtrace datadog
+uv run uvicorn app.main:app --reload
 ```
 
 ---

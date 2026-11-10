@@ -1,0 +1,506 @@
+[
+  {
+    "id": "tokyo_cultural_pass",
+    "trip": {
+      "destination": "Tokyo",
+      "days": 3,
+      "budget": 1500,
+      "trip_style": "cultural"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Tokyo",
+        "duration_days": 3,
+        "total_estimated_cost": 1200,
+        "travel_style": "cultural",
+        "weather_summary": "Mild and partly cloudy"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-10-01",
+          "theme": "Historic Tokyo",
+          "activities": [
+            {"name": "Senso-ji Temple", "time": "09:00 - 11:00", "description": "Ancient Buddhist temple in Asakusa", "estimated_cost": 0},
+            {"name": "Tokyo National Museum", "time": "13:00 - 16:00", "description": "Largest art museum in Japan", "estimated_cost": 15},
+            {"name": "Ueno Park stroll", "time": "16:30 - 18:00", "description": "Evening walk through Ueno Park", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 200
+        },
+        {
+          "day_number": 2,
+          "date": "2024-10-02",
+          "theme": "Modern Tokyo",
+          "activities": [
+            {"name": "Shibuya Crossing", "time": "10:00 - 11:00", "description": "Iconic scramble crossing", "estimated_cost": 0},
+            {"name": "teamLab Borderless", "time": "13:00 - 16:00", "description": "Digital art museum", "estimated_cost": 32},
+            {"name": "Shinjuku Gyoen", "time": "17:00 - 19:00", "description": "National garden", "estimated_cost": 5}
+          ],
+          "estimated_daily_cost": 350
+        },
+        {
+          "day_number": 3,
+          "date": "2024-10-03",
+          "theme": "Food and Markets",
+          "activities": [
+            {"name": "Tsukiji Outer Market", "time": "08:00 - 10:00", "description": "Fresh seafood breakfast", "estimated_cost": 30},
+            {"name": "Harajuku Takeshita Street", "time": "11:00 - 13:00", "description": "Youth fashion street", "estimated_cost": 20},
+            {"name": "Ramen tasting tour", "time": "18:00 - 20:00", "description": "Local ramen shops in Shinjuku", "estimated_cost": 25}
+          ],
+          "estimated_daily_cost": 300
+        }
+      ],
+      "reasoning": "Balanced mix of historic temples, modern attractions, and food culture suited for cultural travel style.",
+      "recommendations": ["Get a Suica card for transit", "Book teamLab in advance", "Try conveyor belt sushi"]
+    },
+    "expected_pass": true
+  },
+  {
+    "id": "barcelona_adventure_pass",
+    "trip": {
+      "destination": "Barcelona",
+      "days": 4,
+      "budget": 2000,
+      "trip_style": "adventure"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Barcelona",
+        "duration_days": 4,
+        "total_estimated_cost": 1800,
+        "travel_style": "adventure",
+        "weather_summary": "Warm and sunny, 28°C"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-07-10",
+          "theme": "Coastal Adventure",
+          "activities": [
+            {"name": "Barceloneta Beach kayaking", "time": "09:00 - 12:00", "description": "Sea kayaking along the coast", "estimated_cost": 45},
+            {"name": "Montjuic Cable Car", "time": "14:00 - 16:00", "description": "Aerial views of the city", "estimated_cost": 12},
+            {"name": "Sunset at Bunkers del Carmel", "time": "19:00 - 21:00", "description": "Panoramic hilltop sunset", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 400
+        },
+        {
+          "day_number": 2,
+          "date": "2024-07-11",
+          "theme": "Urban Exploration",
+          "activities": [
+            {"name": "Park Güell hike", "time": "08:00 - 11:00", "description": "Gaudí park with city views", "estimated_cost": 10},
+            {"name": "Gothic Quarter walking tour", "time": "13:00 - 15:00", "description": "Medieval streets exploration", "estimated_cost": 15},
+            {"name": "Sagrada Familia", "time": "16:00 - 18:00", "description": "Gaudí's masterpiece basilica", "estimated_cost": 26}
+          ],
+          "estimated_daily_cost": 450
+        },
+        {
+          "day_number": 3,
+          "date": "2024-07-12",
+          "theme": "Water Sports",
+          "activities": [
+            {"name": "Surfing lesson at Barceloneta", "time": "09:00 - 12:00", "description": "Beginner surf class", "estimated_cost": 60},
+            {"name": "Paddleboard rental", "time": "14:00 - 16:00", "description": "Stand-up paddleboarding", "estimated_cost": 25},
+            {"name": "Seafood dinner at La Barceloneta", "time": "20:00 - 22:00", "description": "Fresh paella by the sea", "estimated_cost": 40}
+          ],
+          "estimated_daily_cost": 480
+        },
+        {
+          "day_number": 4,
+          "date": "2024-07-13",
+          "theme": "Day Trip",
+          "activities": [
+            {"name": "Montserrat mountain hike", "time": "08:00 - 17:00", "description": "Full day hike to monastery", "estimated_cost": 30}
+          ],
+          "estimated_daily_cost": 200
+        }
+      ],
+      "reasoning": "Adventure-focused itinerary combining water sports, hiking, and urban exploration.",
+      "recommendations": ["Book surf lessons in advance", "Wear sunscreen", "Take the R5 train to Montserrat"]
+    },
+    "expected_pass": true
+  },
+  {
+    "id": "cape_town_luxury_pass",
+    "trip": {
+      "destination": "Cape Town",
+      "days": 5,
+      "budget": 5000,
+      "trip_style": "luxury"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Cape Town",
+        "duration_days": 5,
+        "total_estimated_cost": 4500,
+        "travel_style": "luxury",
+        "weather_summary": "Sunny, 22°C, light breeze"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-11-15",
+          "theme": "Arrival and V&A Waterfront",
+          "activities": [
+            {"name": "Private transfer from airport", "time": "10:00 - 11:00", "description": "Luxury sedan transfer", "estimated_cost": 80},
+            {"name": "V&A Waterfront lunch", "time": "13:00 - 15:00", "description": "Fine dining at The Test Kitchen", "estimated_cost": 120},
+            {"name": "Sunset cruise", "time": "17:00 - 19:00", "description": "Private catamaran sunset cruise", "estimated_cost": 150}
+          ],
+          "estimated_daily_cost": 800
+        },
+        {
+          "day_number": 2,
+          "date": "2024-11-16",
+          "theme": "Table Mountain",
+          "activities": [
+            {"name": "Table Mountain cable car", "time": "09:00 - 12:00", "description": "Iconic cable car ride to summit", "estimated_cost": 30},
+            {"name": "Clifton Beach private cabana", "time": "14:00 - 17:00", "description": "Exclusive beach experience", "estimated_cost": 200},
+            {"name": "La Colombe dinner", "time": "19:00 - 22:00", "description": "Award-winning fine dining", "estimated_cost": 180}
+          ],
+          "estimated_daily_cost": 1000
+        },
+        {
+          "day_number": 3,
+          "date": "2024-11-17",
+          "theme": "Cape Winelands",
+          "activities": [
+            {"name": "Private wine tour Stellenbosch", "time": "09:00 - 17:00", "description": "Chauffeured winery tour", "estimated_cost": 350}
+          ],
+          "estimated_daily_cost": 900
+        },
+        {
+          "day_number": 4,
+          "date": "2024-11-18",
+          "theme": "Cape Peninsula",
+          "activities": [
+            {"name": "Cape Point private tour", "time": "08:00 - 16:00", "description": "Private guided peninsula drive", "estimated_cost": 300},
+            {"name": "Boulders Beach penguins", "time": "10:00 - 11:30", "description": "African penguin colony visit", "estimated_cost": 15}
+          ],
+          "estimated_daily_cost": 900
+        },
+        {
+          "day_number": 5,
+          "date": "2024-11-19",
+          "theme": "Spa and Departure",
+          "activities": [
+            {"name": "Spa morning at hotel", "time": "09:00 - 12:00", "description": "Full body treatment", "estimated_cost": 200},
+            {"name": "Farewell lunch at Harbour House", "time": "13:00 - 15:00", "description": "Seafood with harbour views", "estimated_cost": 100}
+          ],
+          "estimated_daily_cost": 600
+        }
+      ],
+      "reasoning": "Luxury itinerary combining iconic Cape Town experiences with premium dining and private tours.",
+      "recommendations": ["Book La Colombe 2 weeks ahead", "Bring layers for Table Mountain", "Pre-book wine tour transport"]
+    },
+    "expected_pass": true
+  },
+  {
+    "id": "new_york_budget_pass",
+    "trip": {
+      "destination": "New York",
+      "days": 3,
+      "budget": 800,
+      "trip_style": "budget"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "New York",
+        "duration_days": 3,
+        "total_estimated_cost": 700,
+        "travel_style": "budget",
+        "weather_summary": "Cool and clear, 15°C"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-04-05",
+          "theme": "Manhattan Icons",
+          "activities": [
+            {"name": "Central Park walk", "time": "09:00 - 11:00", "description": "Free stroll through Central Park", "estimated_cost": 0},
+            {"name": "The High Line", "time": "12:00 - 14:00", "description": "Free elevated park", "estimated_cost": 0},
+            {"name": "Brooklyn Bridge walk", "time": "15:00 - 17:00", "description": "Iconic free bridge walk", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 80
+        },
+        {
+          "day_number": 2,
+          "date": "2024-04-06",
+          "theme": "Museums and Culture",
+          "activities": [
+            {"name": "Metropolitan Museum of Art", "time": "10:00 - 14:00", "description": "Pay-what-you-wish admission", "estimated_cost": 10},
+            {"name": "Times Square", "time": "15:00 - 17:00", "description": "Free iconic square visit", "estimated_cost": 0},
+            {"name": "Pizza slice tour", "time": "18:00 - 20:00", "description": "Famous NYC dollar pizza slices", "estimated_cost": 15}
+          ],
+          "estimated_daily_cost": 150
+        },
+        {
+          "day_number": 3,
+          "date": "2024-04-07",
+          "theme": "Brooklyn and Food",
+          "activities": [
+            {"name": "DUMBO neighborhood", "time": "10:00 - 12:00", "description": "Free waterfront area with Manhattan views", "estimated_cost": 0},
+            {"name": "Smorgasburg food market", "time": "12:00 - 14:00", "description": "Outdoor food market", "estimated_cost": 25},
+            {"name": "Prospect Park", "time": "15:00 - 17:00", "description": "Free Brooklyn park", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 120
+        }
+      ],
+      "reasoning": "Budget-friendly itinerary maximizing free NYC attractions and affordable food options.",
+      "recommendations": ["Get a MetroCard", "Eat at Halal Guys for cheap meals", "Visit museums on free admission days"]
+    },
+    "expected_pass": true
+  },
+  {
+    "id": "bali_wellness_pass",
+    "trip": {
+      "destination": "Bali",
+      "days": 5,
+      "budget": 2500,
+      "trip_style": "wellness"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Bali",
+        "duration_days": 5,
+        "total_estimated_cost": 2200,
+        "travel_style": "wellness",
+        "weather_summary": "Tropical, 30°C, afternoon showers"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-09-01",
+          "theme": "Arrival and Ubud",
+          "activities": [
+            {"name": "Tegallalang Rice Terraces", "time": "08:00 - 10:00", "description": "Iconic terraced rice fields", "estimated_cost": 5},
+            {"name": "Traditional Balinese massage", "time": "14:00 - 16:00", "description": "2-hour full body massage", "estimated_cost": 30},
+            {"name": "Sunset yoga class", "time": "17:00 - 18:30", "description": "Outdoor yoga with rice field views", "estimated_cost": 15}
+          ],
+          "estimated_daily_cost": 350
+        },
+        {
+          "day_number": 2,
+          "date": "2024-09-02",
+          "theme": "Sacred Temples",
+          "activities": [
+            {"name": "Tirta Empul water purification", "time": "08:00 - 10:00", "description": "Sacred spring temple ritual", "estimated_cost": 5},
+            {"name": "Goa Gajah Elephant Cave", "time": "11:00 - 13:00", "description": "Ancient Hindu temple cave", "estimated_cost": 3},
+            {"name": "Sound healing ceremony", "time": "17:00 - 19:00", "description": "Traditional Balinese sound bath", "estimated_cost": 25}
+          ],
+          "estimated_daily_cost": 400
+        },
+        {
+          "day_number": 3,
+          "date": "2024-09-03",
+          "theme": "Spa Day",
+          "activities": [
+            {"name": "COMO Shambhala spa", "time": "09:00 - 17:00", "description": "Full day wellness retreat", "estimated_cost": 300}
+          ],
+          "estimated_daily_cost": 600
+        },
+        {
+          "day_number": 4,
+          "date": "2024-09-04",
+          "theme": "Seminyak Beach",
+          "activities": [
+            {"name": "Beach meditation at sunrise", "time": "06:00 - 07:30", "description": "Guided sunrise meditation", "estimated_cost": 10},
+            {"name": "Healthy brunch at Sisterfields", "time": "09:00 - 11:00", "description": "Organic café", "estimated_cost": 20},
+            {"name": "Sunset at Ku De Ta", "time": "17:00 - 19:00", "description": "Iconic beach club sunset", "estimated_cost": 30}
+          ],
+          "estimated_daily_cost": 400
+        },
+        {
+          "day_number": 5,
+          "date": "2024-09-05",
+          "theme": "Cooking and Departure",
+          "activities": [
+            {"name": "Balinese cooking class", "time": "09:00 - 12:00", "description": "Learn to cook local dishes", "estimated_cost": 35},
+            {"name": "Final massage and farewell", "time": "14:00 - 16:00", "description": "Relaxing send-off treatment", "estimated_cost": 25}
+          ],
+          "estimated_daily_cost": 300
+        }
+      ],
+      "reasoning": "Wellness-focused itinerary combining spiritual experiences, spa treatments, and healthy living.",
+      "recommendations": ["Respect temple dress codes", "Drink bottled water only", "Book COMO Shambhala in advance"]
+    },
+    "expected_pass": true
+  },
+  {
+    "id": "wrong_destination_fail",
+    "trip": {
+      "destination": "Paris",
+      "days": 2,
+      "budget": 1000,
+      "trip_style": "cultural"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Berlin",
+        "duration_days": 2,
+        "total_estimated_cost": 800,
+        "travel_style": "cultural",
+        "weather_summary": "Cloudy"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-06-01",
+          "theme": "Berlin Wall",
+          "activities": [
+            {"name": "East Side Gallery", "time": "10:00 - 12:00", "description": "Berlin Wall art", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 200
+        },
+        {
+          "day_number": 2,
+          "date": "2024-06-02",
+          "theme": "Museums",
+          "activities": [
+            {"name": "Pergamon Museum", "time": "10:00 - 13:00", "description": "Ancient artifacts", "estimated_cost": 19}
+          ],
+          "estimated_daily_cost": 200
+        }
+      ],
+      "reasoning": "Cultural tour of Berlin.",
+      "recommendations": ["Use public transport"]
+    },
+    "expected_pass": false,
+    "expected_failure_check": "destination_match"
+  },
+  {
+    "id": "budget_exceeded_fail",
+    "trip": {
+      "destination": "Rome",
+      "days": 3,
+      "budget": 500,
+      "trip_style": "cultural"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Rome",
+        "duration_days": 3,
+        "total_estimated_cost": 1800,
+        "travel_style": "cultural",
+        "weather_summary": "Hot and sunny"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-08-01",
+          "theme": "Ancient Rome",
+          "activities": [
+            {"name": "Colosseum VIP tour", "time": "09:00 - 12:00", "description": "Private guided tour", "estimated_cost": 300}
+          ],
+          "estimated_daily_cost": 600
+        },
+        {
+          "day_number": 2,
+          "date": "2024-08-02",
+          "theme": "Vatican",
+          "activities": [
+            {"name": "Vatican Museums private tour", "time": "09:00 - 13:00", "description": "Exclusive after-hours access", "estimated_cost": 400}
+          ],
+          "estimated_daily_cost": 700
+        },
+        {
+          "day_number": 3,
+          "date": "2024-08-03",
+          "theme": "Fine Dining",
+          "activities": [
+            {"name": "Michelin star dinner", "time": "20:00 - 23:00", "description": "Tasting menu", "estimated_cost": 350}
+          ],
+          "estimated_daily_cost": 500
+        }
+      ],
+      "reasoning": "Luxury Rome experience.",
+      "recommendations": ["Book everything in advance"]
+    },
+    "expected_pass": false,
+    "expected_failure_check": "budget_adherence"
+  },
+  {
+    "id": "missing_days_fail",
+    "trip": {
+      "destination": "Amsterdam",
+      "days": 4,
+      "budget": 1500,
+      "trip_style": "cultural"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Amsterdam",
+        "duration_days": 4,
+        "total_estimated_cost": 900,
+        "travel_style": "cultural",
+        "weather_summary": "Mild and rainy"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-05-01",
+          "theme": "Canals",
+          "activities": [
+            {"name": "Canal boat tour", "time": "10:00 - 12:00", "description": "Classic Amsterdam canal cruise", "estimated_cost": 20}
+          ],
+          "estimated_daily_cost": 200
+        },
+        {
+          "day_number": 2,
+          "date": "2024-05-02",
+          "theme": "Museums",
+          "activities": [
+            {"name": "Rijksmuseum", "time": "10:00 - 14:00", "description": "Dutch Golden Age art", "estimated_cost": 22}
+          ],
+          "estimated_daily_cost": 250
+        }
+      ],
+      "reasoning": "Only 2 days planned for a 4-day trip.",
+      "recommendations": ["Rent a bike"]
+    },
+    "expected_pass": false,
+    "expected_failure_check": "day_completeness"
+  },
+  {
+    "id": "irrelevant_activities_fail",
+    "trip": {
+      "destination": "Kyoto",
+      "days": 2,
+      "budget": 1000,
+      "trip_style": "cultural"
+    },
+    "itinerary": {
+      "metadata": {
+        "destination": "Kyoto",
+        "duration_days": 2,
+        "total_estimated_cost": 600,
+        "travel_style": "cultural",
+        "weather_summary": "Mild"
+      },
+      "days": [
+        {
+          "day_number": 1,
+          "date": "2024-03-01",
+          "theme": "Day 1",
+          "activities": [
+            {"name": "Visit a shopping mall", "time": "10:00 - 18:00", "description": "Generic shopping", "estimated_cost": 100},
+            {"name": "Watch TV at hotel", "time": "19:00 - 22:00", "description": "Relax at hotel", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 300
+        },
+        {
+          "day_number": 2,
+          "date": "2024-03-02",
+          "theme": "Day 2",
+          "activities": [
+            {"name": "Sit in hotel lobby", "time": "10:00 - 17:00", "description": "Nothing specific", "estimated_cost": 0}
+          ],
+          "estimated_daily_cost": 100
+        }
+      ],
+      "reasoning": "Generic activities not specific to Kyoto.",
+      "recommendations": []
+    },
+    "expected_pass": false,
+    "expected_failure_check": "llm_relevance"
+  }
+]
